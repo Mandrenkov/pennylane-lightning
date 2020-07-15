@@ -25,7 +25,7 @@ import numpy as np
 
 from pennylane import QubitDevice, DeviceError, QubitStateVector, BasisState
 # from .lightning_qubit_utils import mvp
-from .lightning_qubit_ops import mvp
+from lightning_qubit_ops import mvp
 from . import lightning_ops
 
 
