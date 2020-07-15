@@ -24,8 +24,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Get xtensor-stack dependencies
+      - name: Get pybind11 and xtensor-stack dependencies
         run: |
+          git clone https://github.com/pybind/pybind11.git
           git clone https://github.com/xtensor-stack/xtensor.git
           git clone https://github.com/xtensor-stack/xtensor-python.git
           git clone https://github.com/xtensor-stack/xtensor-blas.git

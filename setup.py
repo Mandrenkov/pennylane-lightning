@@ -46,7 +46,7 @@ class get_pybind_include(object):
 CFLAGS = ["-DXTENSOR_USE_XSIMD -mavx2 -ffast-math -lblas -llapack"]
 LINKFLAGS = ["-l", "blas", "-l", "lapack"]
 
-install_dir = ['/home/antal/xanadu/lightning_deps/']
+install_dir = '/home/antal/xanadu/lightning_deps/'
 
 XTENSOR_INCLUDE = os.getcwd()
 
@@ -58,7 +58,8 @@ ext_modules = [
         sorted(['pennylane_lightning/lightning_qubit_ops.cpp']),
         include_dirs=[
             # Path to pybind11 headers
-            get_pybind_include(),
+            #get_pybind_include(),
+            os.path.join(XTENSOR_INCLUDE, 'pybind11/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor-python/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor-blas/include/'),
