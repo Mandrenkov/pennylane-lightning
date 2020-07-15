@@ -3,7 +3,7 @@ name: Build
 on: [push, pull_request]
 
 env:
-  CIBW_BEFORE_BUILD: pip install numpy
+  CIBW_BEFORE_BUILD: pip install pybind11
   CIBW_BUILD: cp36-*
 
 jobs:
@@ -12,7 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-18.04, windows-latest, macos-latest]
+          #os: [ubuntu-18.04, windows-latest, macos-latest]
+        os: [ubuntu-18.04]
         python-version: [3.6]
 
     steps:
