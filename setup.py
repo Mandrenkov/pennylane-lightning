@@ -53,6 +53,7 @@ XTENSOR_INCLUDE = os.getcwd()
 
 if sys.platform == "linux":
     prefix = os.getenv("CONDA_PREFIX","")
+    prefix = prefix or os.getenv("PREFIX","")
 
     conda_dir = os.path.join(prefix, "lib")
 else:

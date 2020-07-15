@@ -30,15 +30,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
           channels: conda-forge
 
+      - name: OpenBLAS conda
+        run: |
+          conda install libopenblas
+
       - name: Output conda info
         shell: bash -l {0}
         run: |
           conda info
           conda list
 
-      - name: OpenBLAS conda
+      - name: Output conda info
+        shell: bash -l {0}
         run: |
-          conda install libopenblas
+          ls -la
+          find . -name openblas
 
       - name: Get pybind11 and xtensor-stack dependencies
         run: |
