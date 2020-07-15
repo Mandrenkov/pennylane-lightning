@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-18.04, windows-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6]
 
     steps:
       - uses: actions/checkout@v2
@@ -18,6 +18,8 @@ jobs:
         name: Install Python
         with:
           python-version: ${{ matrix.python-version }}
+        run: |
+          alias python=python3
 
       - name: Install cibuildwheel
         run: |
