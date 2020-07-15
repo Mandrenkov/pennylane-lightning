@@ -51,6 +51,13 @@ install_dir = '/home/antal/xanadu/lightning_deps/'
 
 XTENSOR_INCLUDE = os.getcwd()
 
+if sys.platform == "linux":
+    prefix = os.getenv("CONDA_PREFIX","")
+
+    conda_dir = os.path.join(prefix, "lib")
+else:
+    conda_dir = ""
+
 ext_modules = [
     Extension(
         'lightning_qubit_ops',
@@ -61,6 +68,7 @@ ext_modules = [
             # Path to pybind11 headers
             #get_pybind_include(),
             numpy.get_include(),
+            conda_dir,
             os.path.join(XTENSOR_INCLUDE, 'pybind11/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor-python/include/'),
