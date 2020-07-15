@@ -24,6 +24,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - uses: goanpeca/setup-miniconda@v1
+        with:
+          auto-update-conda: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: OpenBLAS conda
+        run: |
+          conda install libopenblas
+
       - name: Get pybind11 and xtensor-stack dependencies
         run: |
           git clone https://github.com/pybind/pybind11.git
