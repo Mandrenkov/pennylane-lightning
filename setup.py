@@ -16,6 +16,7 @@ import sys
 import os
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
+import numpy
 
 with open("pennylane_lightning/_version.py") as f:
     version = f.readlines()[-1].split()[-1].strip("\"'")
@@ -59,6 +60,7 @@ ext_modules = [
         include_dirs=[
             # Path to pybind11 headers
             #get_pybind_include(),
+            numpy.get_include(),
             os.path.join(XTENSOR_INCLUDE, 'pybind11/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor/include/'),
             os.path.join(XTENSOR_INCLUDE, 'xtensor-python/include/'),
