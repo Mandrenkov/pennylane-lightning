@@ -48,7 +48,7 @@ LINKFLAGS = ["-l", "blas", "-l", "lapack"]
 
 install_dir = ['/home/antal/xanadu/lightning_deps/']
 
-XTENSOR_INCLUDE = [os.environ.get("XTENSOR_INCLUDE_DIR", ""),]
+XTENSOR_INCLUDE = os.getcwd()
 
 ext_modules = [
     Extension(
