@@ -28,6 +28,13 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+          channels: conda-forge
+
+      - name: Output conda info
+        shell: bash -l {0}
+        run: |
+          conda info
+          conda list
 
       - name: OpenBLAS conda
         run: |
