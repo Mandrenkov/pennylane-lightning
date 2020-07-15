@@ -28,7 +28,6 @@ jobs:
         with:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-          channels: conda-forge
 
       - name: OpenBLAS conda
         run: |

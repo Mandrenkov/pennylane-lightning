@@ -152,7 +152,6 @@ class BuildExt(build_ext):
             ext.define_macros = [('VERSION_INFO', '"{}"'.format(self.distribution.get_version()))]
             ext.extra_compile_args = opts
             ext.extra_link_args = link_opts
-            ext.libraries = ["openblas"]
         build_ext.build_extensions(self)
 
 
