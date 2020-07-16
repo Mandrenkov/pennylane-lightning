@@ -44,11 +44,26 @@ jobs:
           conda info
           conda list
 
-      - name: Output conda info
+      - name: Output conda info 1
         shell: bash -l {0}
         run: |
           ls -la
           find . -name openblas
+
+      - name: Output conda info 2
+        shell: bash -l {0}
+        run: |
+          ls -la "/usr/share/miniconda/envs/"
+
+      - name: Output conda info 3
+        shell: bash -l {0}
+        run: |
+          ls -la "/usr/share/miniconda/envs/test/"
+
+      - name: Output conda info 4
+        shell: bash -l {0}
+        run: |
+          ls -la "/usr/share/miniconda/envs/test/lib"
 
       - name: Install cibuildwheel
         run: |
