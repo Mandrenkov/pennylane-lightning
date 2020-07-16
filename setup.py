@@ -44,7 +44,7 @@ class get_pybind_include(object):
         return pybind11.get_include()
 
 
-CFLAGS = ["python3 -m pybind11 --includes -DXTENSOR_USE_XSIMD -mavx2 -ffast-math -lblas -llapack"]
+CFLAGS = ["`python3 -m pybind11 --includes` -DXTENSOR_USE_XSIMD -mavx2 -ffast-math -lblas -llapack"]
 LINKFLAGS = ["-l", "blas", "-l", "lapack"]
 
 install_dir = '/home/antal/xanadu/lightning_deps/'
