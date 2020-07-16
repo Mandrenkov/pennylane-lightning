@@ -3,6 +3,7 @@ name: Build
 on: [push, pull_request]
 
 env:
+  CIBW_BEFORE_BUILD: pip install numpy pybind11
   CIBW_BUILD: cp36-*
 
 jobs:
