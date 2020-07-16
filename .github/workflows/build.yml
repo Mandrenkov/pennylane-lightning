@@ -30,25 +30,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
           channels: conda-forge
 
-      - name: OpenBLAS conda
-        run: |
-          conda install libopenblas
-          conda install xtensor
-          conda install xtensor-python
-          conda install xtensor-blas
-          conda install xsimd
-
       - name: Output conda info
         shell: bash -l {0}
         run: |
           conda info
           conda list
 
-      - name: Output conda info 1
-        shell: bash -l {0}
+      - name: Get pybind11 and xtensor-stack dependencies
         run: |
-          ls -la
-          find . -name openblas
+          git clone https://github.com/pybind/pybind11.git
+          git clone https://github.com/xtensor-stack/xtensor.git
+          git clone https://github.com/xtensor-stack/xtensor-python.git
+          git clone https://github.com/xtensor-stack/xtensor-blas.git
+          git clone https://github.com/xtensor-stack/xtl.git
 
       - name: Output conda info 2
         shell: bash -l {0}
