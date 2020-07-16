@@ -49,7 +49,7 @@ LINKFLAGS = ["-l", "blas", "-l", "lapack"]
 
 install_dir = '/home/antal/xanadu/lightning_deps/'
 
-XTENSOR_INCLUDE = install_dir # os.getcwd()
+XTENSOR_INCLUDE = os.getcwd()
 
 if sys.platform == "linux":
     prefix = os.getenv("CONDA_PREFIX","")
