@@ -32,6 +32,10 @@ jobs:
       - name: OpenBLAS conda
         run: |
           conda install libopenblas
+          conda install xtensor
+          conda install xtensor-python
+          conda install xtensor-blas
+          conda install xsimd
 
       - name: Output conda info
         shell: bash -l {0}
