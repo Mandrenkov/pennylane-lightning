@@ -49,7 +49,7 @@ LINKFLAGS = ["-l", "blas", "-l", "lapack"]
 
 install_dir = '/home/antal/xanadu/lightning_deps/'
 
-XTENSOR_INCLUDE = os.getcwd()
+XTENSOR_INCLUDE = install_dir # os.getcwd()
 
 if sys.platform == "linux":
     prefix = os.getenv("CONDA_PREFIX","")
@@ -110,7 +110,8 @@ def cpp_flag(compiler):
     """Return the -std=c++[11/14/17] compiler flag.
     The newer version is prefered over c++11 (when it is available).
     """
-    flags = ['-std=c++17', '-std=c++14', '-std=c++11']
+    # flags = ['-std=c++17', '-std=c++14', '-std=c++11']
+    flags = ['-std=c++14']
 
     for flag in flags:
         if has_flag(compiler, flag):
