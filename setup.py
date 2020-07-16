@@ -69,7 +69,7 @@ ext_modules = [
             # Path to pybind11 headers
             #get_pybind_include(),
             numpy.get_include(),
-            "/usr/share/miniconda/",
+            "/usr/share/miniconda/lib",
             conda_dir,
             # os.path.join(XTENSOR_INCLUDE, 'pybind11/include/'),
             # os.path.join(XTENSOR_INCLUDE, 'xtensor/include/'),
