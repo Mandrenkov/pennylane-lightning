@@ -35,6 +35,7 @@ jobs:
         run: |
           conda info
           conda list
+          python3 -m pybind11 --includes
 
       - name: Get pybind11 and xtensor-stack dependencies
         run: |
