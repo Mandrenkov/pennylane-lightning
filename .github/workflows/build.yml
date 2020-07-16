@@ -53,7 +53,7 @@ jobs:
       - name: Output conda info 2
         shell: bash -l {0}
         run: |
-          ls -la "/usr/share/miniconda/"
+          ls -la "/usr/share/miniconda/lib"
 
       - name: Output conda info 3
         shell: bash -l {0}
