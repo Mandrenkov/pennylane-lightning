@@ -1,31 +1,18 @@
 #pragma once
 
-#include "Eigen/Dense"
-#include "unsupported/Eigen/CXX11/Tensor"
-#include "operations.hpp"
+#include <iostream>
+#include <vector>
+#include <string>
+#include "tensor.h"
 
-using Eigen::Tensor;
-using Eigen::IndexPair;
-using Eigen::VectorXcd;
-using Eigen::Ref;
-using Eigen::TensorMap;
-using Eigen::Map;
-using std::array;
+
 using std::vector;
-using std::complex;
 using std::string;
+using namespace qflex;
 
-// Declare tensor shape for state
-using State_2q = Tensor<complex<double>, 2>;
+using std::array;
+using std::complex;
 
-// Declare tensor shape for 1, 2, and 3-qubit gates
-using Gate_1q = Tensor<complex<double>, 2>;
-using Gate_2q = Tensor<complex<double>, 4>;
-
-// Declare pairings for tensor contraction
-using Pairs = IndexPair<int>;
-using Pairs_1q = array<IndexPair<int>, 1>;
-using Pairs_2q = array<IndexPair<int>, 2>;
 
 const double SQRT2INV = 0.7071067811865475;
 
@@ -38,7 +25,7 @@ vector<int> calc_perm(vector<int> perm, int qubits) {
     return perm;
 }
 
-
+/*
 Gate_1q get_gate_1q(const string &gate_name, const vector<float> &params) {
     Gate_1q op;
 
@@ -67,15 +54,88 @@ Gate_2q get_gate_2q(const string &gate_name, const vector<float> &params) {
     }
     return op;
 }
+*/
 
+qflex::Tensor tensordot_aux(
+			  qflex::Tensor &a, qflex::Tensor &b,
+			  const std::vector<size_t> &axes_a,
+			  const std::vector<size_t> &axes_b
+			  )
+{
+  if(axes_a.size() != axes_b.size()){
+    exit(1);
+  }
+  const std::vector<std::string>& indices_a = a.get_indices();
+  const std::vector<std::string>& indices_b = b.get_indices();
+  std::vector<size_t> dimensions_a = a.get_dimensions();
+  std::vector<size_t> dimensions_b = b.get_dimensions();
 
-VectorXcd apply_2q(
-    Ref<VectorXcd> state,
+  size_t dim = 1;
+  for (int i = 0; i < axes_a.size(); i++){
+    dimensions_a[axes_a[i]] = 1;
+  }
+  for (int i = 0; i < axes_b.size(); i++){
+    dimensions_b[axes_b[i]] = 1;
+  }
+  for (int i = 0; i < dimensions_a.size(); i++){
+    dim *= dimensions_a[i];
+  }
+  for (int i = 0; i < dimensions_b.size(); i++){
+    dim *= dimensions_b[i];
+  }
+
+  qflex::Tensor res({"x"},{dim});
+  for (int i = 0; i < a.get_dimensions().size(); i++){
+    if (indices_a[i] == indices_b[i]){
+      a.rename_index(indices_a[i], indices_b[i] + "1");
+    }
+  }
+
+  for(int i = 0; i < axes_a.size(); i++){
+    if (indices_a[axes_a[i]] != indices_b[axes_b[i]])
+      a.rename_index(indices_a[axes_a[i]], indices_b[axes_b[i]]);
+  }
+
+  std::vector<qflex::s_type> scratch(a.size() > b.size() ? a.size() : b.size());
+  qflex::multiply(a, b, res, scratch.data());
+
+  const std::vector<size_t> & dimensions = res.get_dimensions();
+  /*
+  local_size_ = 1;
+  for (int i = 0; i < dimensions.size(); i++){
+    local_size_ *= dimensions[i];
+  }
+  */
+  return res;
+}
+
+vector<complex<float>> apply_2q(
+    vector<complex<float>> state,
     vector<string> ops,
     vector<vector<int>> wires,
     vector<vector<float>> params
     ) {
-    const int qubits = 2;
+
+    //vector<std::complex<float>> state = {1,0};
+
+    std::vector<std::string> letters = {"a"};
+    std::vector<size_t> dims = {2};
+
+    Tensor state_tensor(letters, dims, state);
+
+
+    // PauliX
+    std::vector<std::string> pauli_letters = {"c", "d"};
+    std::vector<size_t> pauli_dims = {2, 2};
+
+    Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
+
+    std::vector<size_t> axes_a = {0};
+    std::vector<size_t> axes_b = {1};
+
+    auto out_state = tensordot_aux(state_tensor, PauliX, axes_a, axes_b);
+
+    /*
     State_2q state_tensor = TensorMap<State_2q>(state.data(), 2, 2);
     State_2q evolved_tensor = state_tensor;
 
@@ -102,5 +162,8 @@ VectorXcd apply_2q(
     }
 
     auto out_state = Map<VectorXcd> (evolved_tensor.data(), 4, 1);
-    return out_state;
+    */
+    // Pointer to the data
+    vector<complex<float>> output_state(out_state.data(), out_state.data()+out_state.size());
+    return output_state;
 }

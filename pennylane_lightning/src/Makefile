@@ -1,6 +1,6 @@
 # Compile with minimum number of compiler flags, hopefully taking the least amount of time.
 dev:
-	g++ -I /usr/include/eigen3 -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` lightning_qubit.cpp -o lightning_qubit_ops.so
+	g++ -shared -std=c++11 -fPIC `python3 -m pybind11 --includes` tensor.cpp utils.cpp stopwatch.cpp lightning_qubit.cpp -o lightning_qubit_ops.so -lblas -llapack
 
 # Extra compiler flags that I don't understand. We should think about which to include.
 lightning:
