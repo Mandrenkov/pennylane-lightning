@@ -5,6 +5,12 @@
 #include <string>
 #include "tensor.h"
 
+#include "lightning_qubit.hpp"
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include "pybind11/stl.h"
+
+namespace py = pybind11;
 
 using std::vector;
 using std::string;
@@ -109,15 +115,32 @@ qflex::Tensor tensordot_aux(
   return res;
 }
 
-vector<complex<float>> apply_2q(
-    vector<complex<float>> state,
+vector<std::complex<float>> array_to_vector(py::array xs){
+    py::buffer_info info = xs.request();
+    auto ptr = static_cast<double *>(info.ptr);
+
+    int n = 1;
+    for (auto r: info.shape) {
+      n *= r;
+    }
+
+    return vector<std::complex<float>>(ptr, ptr+n);
+
+}
+
+py::array apply_2q(
+    std::vector<std::complex<float>> state,
     vector<string> ops,
     vector<vector<int>> wires,
-    vector<vector<float>> params
+    vector<vector<double>> params
     ) {
+    py::array py_array;
+    try
+    {
 
+        //auto state = array_to_vector(in_state);
+        // code that could cause exception
     //vector<std::complex<float>> state = {1,0};
-
     std::vector<std::string> letters = {"a"};
     std::vector<size_t> dims = {2};
 
@@ -164,6 +187,15 @@ vector<complex<float>> apply_2q(
     auto out_state = Map<VectorXcd> (evolved_tensor.data(), 4, 1);
     */
     // Pointer to the data
-    vector<complex<float>> output_state(out_state.data(), out_state.data()+out_state.size());
-    return output_state;
+    auto v = new std::vector<complex<float>>(out_state.data(), out_state.data()+out_state.size());
+    auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<int>*>(v); });
+
+    auto py_array = py::array(v->size(), v->data(), capsule);
+    }
+    catch (const std::exception &exc)
+    {
+        // catch anything thrown within try block that derives from std::exception
+        std::cerr << exc.what();
+    }
+    return py_array;
 }
