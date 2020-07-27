@@ -128,24 +128,28 @@ vector<std::complex<float>> array_to_vector(py::array xs){
 
 }
 
-py::array apply_2q(
-    std::vector<std::complex<float>> state,
+py::array_t<std::complex<float>> apply_2q(
+    py::array_t<std::complex<float>> in_state,
     vector<string> ops,
     vector<vector<int>> wires,
     vector<vector<double>> params
     ) {
-    py::array py_array;
-    try
-    {
 
-        //auto state = array_to_vector(in_state);
-        // code that could cause exception
-    //vector<std::complex<float>> state = {1,0};
-    std::vector<std::string> letters = {"a"};
-    std::vector<size_t> dims = {2};
+    for (int j = 0; j < in_state.size(); j++) {
+        py::print(*(in_state.data()+j));
+    }
+    std::vector<std::string> letters = {"a", "b"};
+    std::vector<size_t> dims = {2, 2};
 
+    std::vector<std::complex<float>> state;
+    state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
+
+    // std::vector<std::complex<float>> state(in_state.data());
     Tensor state_tensor(letters, dims, state);
 
+    for (int j = 0; j < state_tensor.size(); j++) {
+        py::print(*(state_tensor.data()+j));
+    }
 
     // PauliX
     std::vector<std::string> pauli_letters = {"c", "d"};
@@ -188,14 +192,10 @@ py::array apply_2q(
     */
     // Pointer to the data
     auto v = new std::vector<complex<float>>(out_state.data(), out_state.data()+out_state.size());
-    auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<int>*>(v); });
+    auto capsule = py::capsule(out_state.data(), [](void *v) { delete reinterpret_cast<std::vector<int>*>(v); });
 
+    py::print(out_state.size(), out_state.data());
+    //py::print(v->size(), v->data());
     auto py_array = py::array(v->size(), v->data(), capsule);
-    }
-    catch (const std::exception &exc)
-    {
-        // catch anything thrown within try block that derives from std::exception
-        std::cerr << exc.what();
-    }
     return py_array;
 }
