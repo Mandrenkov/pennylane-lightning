@@ -29,6 +29,47 @@ const double SQRT_2 = sqrt(2);
 const std::complex<double> IMAG(0, 1);
 const std::complex<double> NEGATIVE_IMAG(0, -1);
 
+
+class Operation:{
+
+    private:
+        std::vector<size_t> axes;
+        Tensor operation;
+
+    public:
+        Operation(const std::vector<std::string> & letters, const
+                std::vector<size_t> & dims, const
+                std::vector<std::complex<float>> & operation_vector) {
+
+            operation(letters, dims, operation_vector);
+        }
+
+        // Getter
+        Tensor getOperation() {
+          return operation;
+        }
+
+        // Getter
+        Tensor getAxes() {
+          return operation;
+        }
+}
+
+class PauliX : public Operation{
+
+    public:
+
+        Operation(const std::vector<std::string> & letters, const
+                std::vector<size_t> & dims, const
+                std::vector<std::complex<float>> & operation_vector, bool control_first=true) {
+            : Operation(letters, dims, operation_vector) {
+            {
+                // Define the contraction axes
+                axes = {2,3} ? control_first : {3,2};
+            }
+
+}
+
 Gate_1q Identity() {
     Gate_1q X(2, 2);
     X.setValues({{1, 0}, {0, 1}});
