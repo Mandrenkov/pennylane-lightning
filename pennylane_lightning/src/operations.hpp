@@ -57,6 +57,12 @@ class Operation:{
 
 class PauliX : public Operation{
 
+    private:
+
+        std::vector<std::string> letters = {"xa", "xb"};
+        std::vector<std::size_t> dims = {2,2};
+        std::vector<std::complex<float>> op_vec = {0,1,1,0};
+
     public:
 
         Operation(const std::vector<std::string> & letters, const
@@ -68,6 +74,17 @@ class PauliX : public Operation{
                 axes = {2,3} ? control_first : {3,2};
             }
 
+        PauliX(bool control_first = true){
+
+                // Define the contraction axes
+                if(control_first){
+                    std::vector<size_t> axes = {2,3};
+                }
+                else{
+                    std::vector<size_t> axes = {3,2};
+                }
+                operation = Tensor(letters, dims, op_vec);
+            }
 }
 
 Gate_1q Identity() {
