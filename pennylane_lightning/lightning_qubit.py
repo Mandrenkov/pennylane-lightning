@@ -19,8 +19,8 @@ It implements the necessary :class:`~pennylane._device.Device` methods as well a
 :mod:`qubit operations <pennylane.ops.qubit>`, and provides a very simple pure state
 simulation of a qubit-based quantum circuit architecture.
 """
-from pennylane.plugins import DefaultQubit
-from .src.lightning_qubit_ops import apply_2q
+from pennylane.devices import DefaultQubit
+from .src.lightning_qubit import apply_2q
 import numpy as np
 from pennylane import QubitStateVector, BasisState, DeviceError
 
