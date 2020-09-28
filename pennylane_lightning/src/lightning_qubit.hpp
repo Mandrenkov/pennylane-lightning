@@ -35,6 +35,8 @@ const std::string alphabet = {'a','b','c','d','e','f',
     'g','h','i','j','k','l','m','n','o','p',
     'q','r','s','t','u','v','w','x','y','z'};
 
+/*
+
 Gate_1q get_gate_1q(const string &gate_name, const vector<float> &params) {
     Gate_1q op;
 
@@ -54,7 +56,6 @@ Gate_1q get_gate_1q(const string &gate_name, const vector<float> &params) {
 }
 
 
-/*
 Gate_2q get_gate_2q(const string &gate_name, const vector<float> &params) {
     Gate_2q op;
 
@@ -145,12 +146,13 @@ py::array_t<std::complex<float>> apply_2q(
     std::vector<std::string> letters;
     std::vector<size_t> dims; // = {2, 2};
 
-    int qubits = log2(tensor_contracted.size());
-
-    for(i=0; i< qubits; ++i){
+    //int qubits = log2(tensor_contracted.size());
+    /*
+    for(int i=0; i< qubits; ++i){
         letters.push_back(alphabet.at(i));
         dims.push_back(2)
     }
+    */
 
     std::vector<std::complex<float>> state;
     state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
@@ -162,26 +164,36 @@ py::array_t<std::complex<float>> apply_2q(
         py::print(*(state_tensor.data()+j));
     }
 
+    qflex::Tensor out_state;
 
     for (int i = 0; i < ops.size(); i++) {
         // Load operation string and corresponding wires and parameters
         string op_string = ops[i];
         vector<int> w = wires[i];
-        vector<float> p = params[i];
+        vector<double> p = params[i];
 
         if (w.size() == 1) {
+            /*
             Gate_1q op_1q = get_gate_1q(op_string, p);
             Pairs_1q pairs_1q = {Pairs(1, w[0])};
             tensor_contracted = op_1q.contract(evolved_tensor, pairs_1q);
+            */
 
-            auto out_state = tensordot_aux(PauliX, state_tensor, axes_a, axes_b);
+            std::vector<std::string> pauli_letters = {"c", "d"};
+            std::vector<size_t> pauli_dims = {2, 2};
+
+            Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
+
+            std::vector<size_t> axes_a = {1};
+            std::vector<size_t> axes_b = {0};
+            out_state = tensordot_aux(PauliX, state_tensor, axes_a, axes_b);
         }
+    /*
         else if (w.size() == 2) {
             Gate_2q op_2q = get_gate_2q(op_string, p);
             Pairs_2q pairs_2q = {Pairs(2, w[0]), Pairs(3, w[1])};
             tensor_contracted = op_2q.contract(evolved_tensor, pairs_2q);
         }
-    /*
     // PauliX
     std::vector<std::string> pauli_letters = {"c", "d"};
     std::vector<size_t> pauli_dims = {2, 2};
