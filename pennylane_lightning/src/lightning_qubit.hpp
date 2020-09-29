@@ -1,5 +1,4 @@
 #pragma once
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -140,107 +139,134 @@ py::array_t<std::complex<float>> apply_2q(
     vector<vector<double>> params
     ) {
 
-    for (int j = 0; j < in_state.size(); j++) {
-        py::print(*(in_state.data()+j));
-    }
-    std::vector<std::string> letters;
-    std::vector<size_t> dims; // = {2, 2};
+    py::array_t<std::complex<float>> py_array;
 
-    int qubits = log2(in_state.size());
-    for(int i=0; i< qubits; ++i){
-        letters.push_back(alphabet.at(i));
-        dims.push_back(2);
-    }
+    if(0 == ops.size()){
+        py_array = in_state;
 
-    std::vector<std::complex<float>> state;
-    state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
+        std::vector<std::string> letters;
+        std::vector<size_t> dims; // = {2, 2};
 
-    // std::vector<std::complex<float>> state(in_state.data());
-    qflex::Tensor state_tensor(letters, dims, state);
-
-    /*
-    for (int j = 0; j < state_tensor.size(); j++) {
-        py::print(*(state_tensor.data()+j));
-    }
-    */
-
-    py::print(1234);
-    py::print("meg jo");
-    qflex::Tensor out_state;
-
-    for (int i = 0; i < ops.size(); i++) {
-        // Load operation string and corresponding wires and parameters
-        string op_string = ops[i];
-        vector<int> w = wires[i];
-        vector<double> p = params[i];
-
-        if (w.size() == 1) {
-            /*
-            Gate_1q op_1q = get_gate_1q(op_string, p);
-            Pairs_1q pairs_1q = {Pairs(1, w[0])};
-            tensor_contracted = op_1q.contract(evolved_tensor, pairs_1q);
-            */
-
-            std::vector<std::string> pauli_letters = {"c", "d"};
-            std::vector<size_t> pauli_dims = {2, 2};
-
-            qflex::Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
-
-            std::vector<size_t> axes_a = {1};
-            std::vector<size_t> axes_b = {0};
-            out_state = tensordot_aux(PauliX, state_tensor, axes_a, axes_b);
-        }
-    /*
-        else if (w.size() == 2) {
-            Gate_2q op_2q = get_gate_2q(op_string, p);
-            Pairs_2q pairs_2q = {Pairs(2, w[0]), Pairs(3, w[1])};
-            tensor_contracted = op_2q.contract(evolved_tensor, pairs_2q);
-        }
-    // PauliX
-    std::vector<std::string> pauli_letters = {"c", "d"};
-    std::vector<size_t> pauli_dims = {2, 2};
-
-    Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
-
-    std::vector<size_t> axes_a = {1};
-    std::vector<size_t> axes_b = {0};
-
-    auto out_state = tensordot_aux(PauliX, state_tensor, axes_a, axes_b);
-
-    for (int i = 0; i < ops.size(); i++) {
-        // Load operation string and corresponding wires and parameters
-        string op_string = ops[i];
-        vector<int> w = wires[i];
-        vector<float> p = params[i];
-
-        if (w.size() == 1) {
-            Gate_1q op_1q = get_gate_1q(op_string, p);
-            Pairs_1q pairs_1q = {Pairs(1, w[0])};
-            tensor_contracted = op_1q.contract(evolved_tensor, pairs_1q);
-        }
-        else if (w.size() == 2) {
-            Gate_2q op_2q = get_gate_2q(op_string, p);
-            Pairs_2q pairs_2q = {Pairs(2, w[0]), Pairs(3, w[1])};
-            tensor_contracted = op_2q.contract(evolved_tensor, pairs_2q);
+        int qubits = log2(in_state.size());
+        for(int i=0; i< qubits; ++i){
+            letters.push_back(alphabet.at(i));
+            dims.push_back(2);
         }
 
-        auto perm = calc_perm(w, qubits);
-        evolved_tensor = tensor_contracted.shuffle(perm);
+        std::vector<std::complex<float>> state;
+        state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
+
+        // std::vector<std::complex<float>> state(in_state.data());
+        qflex::Tensor state_tensor(letters, dims, state);
+
+        /*
+        // Moving approach
+        auto v = new std::vector<complex<float>>(state_tensor.data(), state_tensor.data()+state_tensor.size());
+        auto capsule = py::capsule(state_tensor.data(), [](void *v) { delete reinterpret_cast<std::vector<complex<float>>*>(v); });
+
+        //py::print(v->size(), v->data());
+        py_array = py::array(v->size(), v->data(), capsule);
+        */
+
+        // Copying approach
+        return py::array(state_tensor.size(), state_tensor.data());
     }
+    else{
 
-    auto out_state = Map<VectorXcd> (evolved_tensor.data(), 4, 1);
-    */
-    // Pointer to the data
-    auto v = new std::vector<complex<float>>(out_state.data(), out_state.data()+out_state.size());
-    auto capsule = py::capsule(out_state.data(), [](void *v) { delete reinterpret_cast<std::vector<int>*>(v); });
+        std::vector<std::string> letters;
+        std::vector<size_t> dims; // = {2, 2};
 
-    py::print(out_state.size(), out_state.data());
-    //py::print(v->size(), v->data());
-    py::array_t<std::complex<float>> py_array = py::array(v->size(), v->data(), capsule);
+        int qubits = log2(in_state.size());
+        for(int i=0; i< qubits; ++i){
+            letters.push_back(alphabet.at(i));
+            dims.push_back(2);
+        }
 
-    for (int j = 0; j < py_array.size(); j++) {
-        py::print(*(py_array.data()+j));
+        std::vector<std::complex<float>> state;
+        state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
+
+        // std::vector<std::complex<float>> state(in_state.data());
+        qflex::Tensor state_tensor(letters, dims, state);
+
+        for (int i = 0; i < ops.size(); i++) {
+            // Load operation string and corresponding wires and parameters
+            string op_string = ops[i];
+            vector<int> w = wires[i];
+            vector<double> p = params[i];
+
+            if (w.size() == 1) {
+                /*
+                Gate_1q op_1q = get_gate_1q(op_string, p);
+                Pairs_1q pairs_1q = {Pairs(1, w[0])};
+                tensor_contracted = op_1q.contract(evolved_tensor, pairs_1q);
+                */
+
+                std::vector<std::string> pauli_letters = {"c", "d"};
+                std::vector<size_t> pauli_dims = {2, 2};
+
+                //qflex::Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
+                double param = p.at(0);
+                const double c = std::cos(param / 2);
+                const double s = std::sin(param / 2);
+                qflex::Tensor RY(pauli_letters, pauli_dims, {c, -s, s, c});
+
+                std::vector<size_t> axes_a = {1};
+                std::vector<size_t> axes_b = {0};
+                qflex::Tensor evolved_tensor;
+                evolved_tensor = tensordot_aux(RY, state_tensor, axes_a, axes_b);
+                state_tensor = std::move(evolved_tensor);
+            }
+        }
+        /*
+            else if (w.size() == 2) {
+                Gate_2q op_2q = get_gate_2q(op_string, p);
+                Pairs_2q pairs_2q = {Pairs(2, w[0]), Pairs(3, w[1])};
+                tensor_contracted = op_2q.contract(evolved_tensor, pairs_2q);
+            }
+        // PauliX
+        std::vector<std::string> pauli_letters = {"c", "d"};
+        std::vector<size_t> pauli_dims = {2, 2};
+
+        Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
+
+        std::vector<size_t> axes_a = {1};
+        std::vector<size_t> axes_b = {0};
+
+        auto out_state = tensordot_aux(PauliX, state_tensor, axes_a, axes_b);
+
+        for (int i = 0; i < ops.size(); i++) {
+            // Load operation string and corresponding wires and parameters
+            string op_string = ops[i];
+            vector<int> w = wires[i];
+            vector<float> p = params[i];
+
+            if (w.size() == 1) {
+                Gate_1q op_1q = get_gate_1q(op_string, p);
+                Pairs_1q pairs_1q = {Pairs(1, w[0])};
+                tensor_contracted = op_1q.contract(evolved_tensor, pairs_1q);
+            }
+            else if (w.size() == 2) {
+                Gate_2q op_2q = get_gate_2q(op_string, p);
+                Pairs_2q pairs_2q = {Pairs(2, w[0]), Pairs(3, w[1])};
+                tensor_contracted = op_2q.contract(evolved_tensor, pairs_2q);
+            }
+
+            auto perm = calc_perm(w, qubits);
+            evolved_tensor = tensor_contracted.shuffle(perm);
+        }
+
+        auto out_state = Map<VectorXcd> (evolved_tensor.data(), 4, 1);
+        */
+        // Pointer to the data
+        auto v = new std::vector<complex<float>>(state_tensor.data(), state_tensor.data()+state_tensor.size());
+        auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<complex<float>>*>(v); });
+
+        //py::print(v->size(), v->data());
+        return py::array(v->size(), v->data(), capsule);
+
+        /* Copying
+        return py::array(state_tensor.size(), state_tensor.data());
+        */
     }
     return py_array;
-    }
 }

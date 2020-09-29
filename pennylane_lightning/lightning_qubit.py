@@ -71,6 +71,6 @@ class LightningQubit(DefaultQubit):
         op_wires = [self.map_wires(o.wires).tolist() for o in operations]
         op_param = [o.parameters for o in operations]
         state_vector = np.ravel(state, order="F")
-        print(state_vector)
+        #print(state_vector, op_names, op_wires)
         state_vector_updated = apply_2q(state_vector, op_names, op_wires, op_param)
         return np.reshape(state_vector_updated, state.shape, order="F")
