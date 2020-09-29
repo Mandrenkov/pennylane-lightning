@@ -65,11 +65,10 @@ class LightningQubit(DefaultQubit):
         else:
             self._state = self._pre_rotated_state
 
-    @staticmethod
-    def apply_lightning(state, operations):
+    def apply_lightning(self, state, operations):
         """TODO"""
         op_names = [o.name for o in operations]
-        op_wires = [o.wires for o in operations]
+        op_wires = [self.map_wires(o.wires).tolist() for o in operations]
         op_param = [o.parameters for o in operations]
         state_vector = np.ravel(state, order="F")
         print(state_vector)

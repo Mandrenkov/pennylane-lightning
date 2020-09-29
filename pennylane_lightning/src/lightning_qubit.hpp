@@ -31,9 +31,9 @@ vector<int> calc_perm(vector<int> perm, int qubits) {
     return perm;
 }
 
-const std::string alphabet = {'a','b','c','d','e','f',
-    'g','h','i','j','k','l','m','n','o','p',
-    'q','r','s','t','u','v','w','x','y','z'};
+const std::vector<std::string> alphabet{"a","b","c","d","e","f",
+    "g","h","i","j","k","l","m","n","o","p",
+    "q","r","s","t","u","v","w","x","y","z"};
 
 /*
 
@@ -146,24 +146,26 @@ py::array_t<std::complex<float>> apply_2q(
     std::vector<std::string> letters;
     std::vector<size_t> dims; // = {2, 2};
 
-    //int qubits = log2(tensor_contracted.size());
-    /*
+    int qubits = log2(in_state.size());
     for(int i=0; i< qubits; ++i){
         letters.push_back(alphabet.at(i));
-        dims.push_back(2)
+        dims.push_back(2);
     }
-    */
 
     std::vector<std::complex<float>> state;
     state.assign(in_state.mutable_data(), in_state.mutable_data()+in_state.size());
 
     // std::vector<std::complex<float>> state(in_state.data());
-    Tensor state_tensor(letters, dims, state);
+    qflex::Tensor state_tensor(letters, dims, state);
 
+    /*
     for (int j = 0; j < state_tensor.size(); j++) {
         py::print(*(state_tensor.data()+j));
     }
+    */
 
+    py::print(1234);
+    py::print("meg jo");
     qflex::Tensor out_state;
 
     for (int i = 0; i < ops.size(); i++) {
@@ -182,7 +184,7 @@ py::array_t<std::complex<float>> apply_2q(
             std::vector<std::string> pauli_letters = {"c", "d"};
             std::vector<size_t> pauli_dims = {2, 2};
 
-            Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
+            qflex::Tensor PauliX(pauli_letters, pauli_dims, {0, 1, 1, 0});
 
             std::vector<size_t> axes_a = {1};
             std::vector<size_t> axes_b = {0};
@@ -234,7 +236,11 @@ py::array_t<std::complex<float>> apply_2q(
 
     py::print(out_state.size(), out_state.data());
     //py::print(v->size(), v->data());
-    auto py_array = py::array(v->size(), v->data(), capsule);
+    py::array_t<std::complex<float>> py_array = py::array(v->size(), v->data(), capsule);
+
+    for (int j = 0; j < py_array.size(); j++) {
+        py::print(*(py_array.data()+j));
+    }
     return py_array;
     }
 }

@@ -4,7 +4,7 @@
 //#include <pybind11/pybind11.h>
 
 
-PYBIND11_MODULE(lightning_qubit_ops, m)
+PYBIND11_MODULE(lightning_qubit, m)
 {
     m.doc() = "lightning.qubit apply() method using Eigen";
     m.def("apply_2q", apply_2q, "lightning.qubit 2-qubit apply() method");
