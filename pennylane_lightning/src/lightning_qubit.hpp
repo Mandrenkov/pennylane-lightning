@@ -236,4 +236,5 @@ py::array_t<std::complex<float>> apply_2q(
     //py::print(v->size(), v->data());
     auto py_array = py::array(v->size(), v->data(), capsule);
     return py_array;
+    }
 }
