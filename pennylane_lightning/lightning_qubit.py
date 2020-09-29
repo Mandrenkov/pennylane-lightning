@@ -24,6 +24,7 @@ from .src.lightning_qubit import apply_2q
 import numpy as np
 from pennylane import QubitStateVector, BasisState, DeviceError
 
+import datetime
 
 class LightningQubit(DefaultQubit):
     """TODO"""
@@ -68,7 +69,7 @@ class LightningQubit(DefaultQubit):
     def apply_lightning(self, state, operations):
         """TODO"""
         op_names = [o.name for o in operations]
-        op_wires = [self.map_wires(o.wires).tolist() for o in operations]
+        op_wires = [self.wires.indices(o.wires) for o in operations]
         op_param = [o.parameters for o in operations]
         state_vector = np.ravel(state, order="F")
         #print(state_vector, op_names, op_wires)

@@ -4,6 +4,8 @@
 #include <string>
 #include "tensor.h"
 
+#include <chrono>
+
 #include "lightning_qubit.hpp"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
@@ -66,6 +68,7 @@ Gate_2q get_gate_2q(const string &gate_name, const vector<float> &params) {
 }
 */
 
+// Credits to Trevor Vincent who authored the following function
 qflex::Tensor tensordot_aux(
 			  qflex::Tensor &a, qflex::Tensor &b,
 			  const std::vector<size_t> &axes_a,
@@ -132,14 +135,21 @@ vector<std::complex<float>> array_to_vector(py::array xs){
 
 }
 
+using namespace std::chrono;
+
 py::array_t<std::complex<float>> apply_2q(
-    py::array_t<std::complex<float>> in_state,
+    py::array_t<std::complex<float>, py::array::c_style | py::array::forcecast> in_state,
     vector<string> ops,
     vector<vector<int>> wires,
     vector<vector<double>> params
     ) {
 
+    auto start = std::chrono::steady_clock::now();
+
     py::array_t<std::complex<float>> py_array;
+
+    //py::print(v->size(), v->data());
+    //jp
 
     if(0 == ops.size()){
         py_array = in_state;
@@ -217,6 +227,7 @@ py::array_t<std::complex<float>> apply_2q(
                 state_tensor = std::move(evolved_tensor);
             }
         }
+
         /*
             else if (w.size() == 2) {
                 Gate_2q op_2q = get_gate_2q(op_string, p);
@@ -258,11 +269,22 @@ py::array_t<std::complex<float>> apply_2q(
         auto out_state = Map<VectorXcd> (evolved_tensor.data(), 4, 1);
         */
         // Pointer to the data
+        //
+
         auto v = new std::vector<complex<float>>(state_tensor.data(), state_tensor.data()+state_tensor.size());
         auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<complex<float>>*>(v); });
 
+        //  Insert the code that will be timed
+
+        // Store the time difference between start and end
         //py::print(v->size(), v->data());
-        return py::array(v->size(), v->data(), capsule);
+        py_array = py::array(v->size(), v->data(), capsule);
+
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> diff = end - start;
+
+        py::print("end: ");
+        py::print(diff.count());
 
         /* Copying
         return py::array(state_tensor.size(), state_tensor.data());
