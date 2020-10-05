@@ -69,6 +69,8 @@ Gate_2q get_gate_2q(const string &gate_name, const vector<float> &params) {
 */
 
 // Credits to Trevor Vincent who authored the following function
+// The following function assumes that the dimension of the result tensor is
+// identical to the one for the tensor passed as the second argument (Tensor b)
 qflex::Tensor tensordot_aux(
 			  qflex::Tensor &a, qflex::Tensor &b,
 			  const std::vector<size_t> &axes_a,
@@ -80,39 +82,24 @@ qflex::Tensor tensordot_aux(
   }
   const std::vector<std::string>& indices_a = a.get_indices();
   const std::vector<std::string>& indices_b = b.get_indices();
-  std::vector<size_t> dimensions_a = a.get_dimensions();
-  std::vector<size_t> dimensions_b = b.get_dimensions();
+  //std::vector<size_t> dimensions_a = a.get_dimensions();
+  const std::vector<size_t> & dimensions_b = b.get_dimensions();
 
-  size_t dim = 1;
-  for (int i = 0; i < axes_a.size(); i++){
-    dimensions_a[axes_a[i]] = 1;
-  }
-  for (int i = 0; i < axes_b.size(); i++){
-    dimensions_b[axes_b[i]] = 1;
-  }
-  for (int i = 0; i < dimensions_a.size(); i++){
-    dim *= dimensions_a[i];
-  }
-  for (int i = 0; i < dimensions_b.size(); i++){
-    dim *= dimensions_b[i];
-  }
+  qflex::Tensor res({"SomeDefaultIndex"},dimensions_b);
+  std::vector<qflex::s_type> scratch(b.size());
 
-  qflex::Tensor res({"x"},{dim});
-  for (int i = 0; i < a.get_dimensions().size(); i++){
-    if (indices_a[i] == indices_b[i]){
-      a.rename_index(indices_a[i], indices_b[i] + "1");
-    }
-  }
-
-  for(int i = 0; i < axes_a.size(); i++){
-    if (indices_a[axes_a[i]] != indices_b[axes_b[i]])
-      a.rename_index(indices_a[axes_a[i]], indices_b[axes_b[i]]);
-  }
-
-  std::vector<qflex::s_type> scratch(a.size() > b.size() ? a.size() : b.size());
+  //auto start = std::chrono::steady_clock::now();
   qflex::multiply(a, b, res, scratch.data());
 
-  const std::vector<size_t> & dimensions = res.get_dimensions();
+  /*
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> diff = end - start;
+
+    */
+    //py::print("end of pure multiply: ");
+    //py::print(diff.count());
+
+  //const std::vector<size_t> & dimensions = res.get_dimensions();
   /*
   local_size_ = 1;
   for (int i = 0; i < dimensions.size(); i++){
@@ -144,12 +131,7 @@ py::array_t<std::complex<float>> apply_2q(
     vector<vector<double>> params
     ) {
 
-    auto start = std::chrono::steady_clock::now();
-
     py::array_t<std::complex<float>> py_array;
-
-    //py::print(v->size(), v->data());
-    //jp
 
     if(0 == ops.size()){
         py_array = in_state;
@@ -223,7 +205,11 @@ py::array_t<std::complex<float>> apply_2q(
                 std::vector<size_t> axes_a = {1};
                 std::vector<size_t> axes_b = {0};
                 qflex::Tensor evolved_tensor;
+
+                // we assume that the second argument is the statevector such
+                // that the dim can be derived
                 evolved_tensor = tensordot_aux(RY, state_tensor, axes_a, axes_b);
+
                 state_tensor = std::move(evolved_tensor);
             }
         }
@@ -274,17 +260,7 @@ py::array_t<std::complex<float>> apply_2q(
         auto v = new std::vector<complex<float>>(state_tensor.data(), state_tensor.data()+state_tensor.size());
         auto capsule = py::capsule(v, [](void *v) { delete reinterpret_cast<std::vector<complex<float>>*>(v); });
 
-        //  Insert the code that will be timed
-
-        // Store the time difference between start and end
-        //py::print(v->size(), v->data());
         py_array = py::array(v->size(), v->data(), capsule);
-
-        auto end = std::chrono::steady_clock::now();
-        std::chrono::duration<double> diff = end - start;
-
-        py::print("end: ");
-        py::print(diff.count());
 
         /* Copying
         return py::array(state_tensor.size(), state_tensor.data());
