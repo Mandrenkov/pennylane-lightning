@@ -94,6 +94,24 @@ vector<int> calculate_tensor_indices(const vector<int> &wires, const vector<int>
     return new_tensor_indices;
 }
 
+Matrix2cd mvp_get_gate_1q(const string &gate_name, const vector<float> &params){
+    Matrix2cd op;
+
+    if (params.empty()) {
+        mvp_pfunc_Xq f = MVPOneQubitOps.at(gate_name);
+        op = (*f)();
+    }
+    else if (params.size() == 1) {
+        mvp_pfunc_Xq_one_param f = MVPOneQubitOpsOneParam.at(gate_name);
+        op = (*f)(params[0]);
+    }
+    else if (params.size() == 3) {
+        mvp_pfunc_Xq_three_params f = MVPOneQubitOpsThreeParams.at(gate_name);
+        op = (*f)(params[0], params[1], params[2]);
+    }
+    return op;
+}
+
 Gate_Xq<1> get_gate_1q(const string &gate_name, const vector<float> &params) {
     Gate_Xq<1> op;
 
