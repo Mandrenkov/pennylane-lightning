@@ -29,7 +29,7 @@ VectorXcd apply (
         throw std::invalid_argument("Must specify one or more qubits");
 
     switch (qubits) {
-    case 1: return QubitOperations<1>::apply(state, ops, wires, params);
+    case 1: return apply_ops_mvp(state, ops, wires, params);
     case 2: return QubitOperations<2>::apply(state, ops, wires, params);
     case 3: return QubitOperations<3>::apply(state, ops, wires, params);
     case 4: return QubitOperations<4>::apply(state, ops, wires, params);
@@ -211,4 +211,71 @@ VectorXcd apply_ops_2q(
     State_Xq<2> shuffled_evolved_tensor = evolved_tensor.shuffle(qubit_positions);
 
     return Map<VectorXcd> (shuffled_evolved_tensor.data(), shuffled_evolved_tensor.size(), 1);
+}
+
+vector<int> gen_b_vec(const int num_qubits, const vector<int> &wires, const int in_val){
+    vector<int> b0;
+
+    int not_in_val = in_val + 1 % 2;
+    for (int i=0; i<num_qubits; ++i){
+
+        // Check if qubit is spec as wires
+        if(std::find(wires.begin(), wires.end(), i) != wires.end()) {
+            b0.push_back(in_val);
+            /* v contains x */
+        } else {
+            b0.push_back(not_in_val);
+            /* v does not contain x */
+        }
+    }
+    return b0;
+}
+
+void apply_mvp( Ref<VectorXcd> state, Ref<Matrix2cd> mx, const vector<int> &B0,
+        const vector<int> &B1, const int m){
+    VectorXcd temp_vec(2);
+
+    for(int i=0; i<B0.size(); ++i){
+        // Read values from the state vector
+        
+        for(int j=0; j<B1.size(); ++j){
+            temp_vec(j) = state(B0.at(i) + B1.at(j));
+        }
+
+        // Perform mx-vector mult
+        temp_vec = mx *temp_vec;
+        std::cout << temp_vec;
+
+        for(int j=0; j<B1.size(); ++j){
+            state(B0.at(i) + B1.at(j)) = temp_vec(j);
+        }
+    }
+    std::cout << state;
+}
+
+VectorXcd apply_ops_mvp(
+    Ref<VectorXcd> state,
+    const vector<string> & ops,
+    const vector<vector<int>> & wires,
+    const vector<vector<float>> &params
+) {
+
+    int num_ops = ops.size();
+
+    for (int i = 0; i < num_ops; i++) {
+        // Load operation string and corresponding wires and parameters
+        string op_string = ops[i];
+        vector<int> w = wires[i];
+        int num_wires = w.size();
+        vector<float> p = params[i];
+
+        // TODO: bigger gates
+        Matrix2cd op_1q = mvp_get_gate_1q(op_string, p);
+        int num_qubits = state.size();
+        auto b0 = gen_b_vec(num_qubits, w, 0);
+        auto b1 = gen_b_vec(num_qubits, w, 1);
+        apply_mvp(state, op_1q, b0, b1, 1);
+
+    return state;
+}
 }

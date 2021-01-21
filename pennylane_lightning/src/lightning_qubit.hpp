@@ -20,8 +20,11 @@
 #pragma once
 
 #define _USE_MATH_DEFINES
+#include <algorithm>
+
 #include <numeric>
 #include "operations.hpp"
+#include "operations_mvp.hpp"
 
 using Eigen::VectorXcd;
 using Eigen::MatrixXcd;
@@ -365,3 +368,18 @@ public:
         return QubitOperationsGenerator<Dim, Dim>::apply(state, ops, wires, params);
     }
 };
+
+Matrix2cd mvp_get_gate_1q(const string &gate_name, const vector<float> &params);
+
+vector<int> gen_b_vec(const int num_qubits, const vector<int> &wires, const int in_val);
+
+
+void apply_mvp( Ref<VectorXcd> state, Ref<Matrix2cd> mx, const vector<int> &B0,
+        const vector<int> &B1, const int m);
+
+VectorXcd apply_ops_mvp(
+    Ref<VectorXcd> state,
+    const vector<string> & ops,
+    const vector<vector<int>> & wires,
+    const vector<vector<float>> &params
+);
