@@ -87,7 +87,7 @@ int main(){
     }
 
     // Apply the operations
-    apply (state, ops, wires, params, qubits)
+    apply (state, ops, wires, params, qubits);
 
     // Outputs (optional)
     if (output == true){
