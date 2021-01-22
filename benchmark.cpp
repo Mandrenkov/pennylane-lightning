@@ -27,9 +27,7 @@ using std::string;
 constexpr double PI = 3.14159265358;
 
 float random_param(){
-    std::mt19937 rng( std::random_device{}() );
-    std::uniform_real_distribution<> dist(0, 2*PI);
-    return dist(rng);
+    return static_cast <float> (rand()) / (static_cast <float> (RAND_MAX/2*PI));
 }
 
 void strongly_entangling(vector<string> &ops, vector<vector<int>> &orig_wires, const vector<int> &layer_wires,
@@ -66,8 +64,11 @@ int main(){
     bool output = false;
 
     // Benchmark params
-    const int qubits = 20;
-    const int num_layers = 10;
+    const int qubits = 5;
+    const int num_layers = 30;
+
+    // The wires strongly entangling layers should act on
+    vector<int> entangling_wires = {3,0,1,2,4};
 
     // Prep 0 state
     VectorXcd state(int(std::pow(2, qubits)));
@@ -77,9 +78,6 @@ int main(){
     vector<string> ops = {};
     vector<vector<int>> wires = {};
     vector<vector<float>> params = {};
-
-    // The wires strongly entangling layers should act on
-    vector<int> entangling_wires = {8,9,3,2,1,0,5,6,4};
 
     // Call the layers multiple times
     for (int i=0; i<num_layers; ++i){
