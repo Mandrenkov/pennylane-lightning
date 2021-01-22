@@ -62,3 +62,9 @@ coverage:
 test-cpp:
 	make -C pennylane_lightning/src/tests clean
 	GOOGLETEST_DIR=$(HOME)/googletest make -C pennylane_lightning/src/tests test
+
+benchmark:
+	g++ -I/usr/include/eigen3 benchmark.cpp pennylane_lightning/src/lightning_qubit.cpp -fpermissive -O3 -pg
+
+benchmark-noeigen:
+	g++ -I/usr/include/eigen3 benchmark.cpp -fpermissive -pg -O3

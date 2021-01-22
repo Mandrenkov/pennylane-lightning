@@ -38,6 +38,13 @@ using std::find;
 
 const double SQRT2INV = 0.7071067811865475;
 
+VectorXcd apply_ops_mvp(
+    Ref<VectorXcd> state,
+    const vector<string> & ops,
+    const vector<vector<int>> & wires,
+    const vector<vector<float>> &params
+);
+
 /**
 * Applies specified operations onto an input state of an arbitrary number of qubits.
 *
@@ -324,7 +331,7 @@ public:
         const vector<vector<float>>& params,
         Shape... shape)
     {
-        return apply_ops_1q(state, ops, params);
+        return apply_ops_mvp(state, ops, wires, params);
     }
 };
 
@@ -376,10 +383,3 @@ vector<int> gen_b_vec(const int num_qubits, const vector<int> &wires, const int 
 
 void apply_mvp( Ref<VectorXcd> state, Ref<Matrix2cd> mx, const vector<int> &B0,
         const vector<int> &B1, const int m);
-
-VectorXcd apply_ops_mvp(
-    Ref<VectorXcd> state,
-    const vector<string> & ops,
-    const vector<vector<int>> & wires,
-    const vector<vector<float>> &params
-);

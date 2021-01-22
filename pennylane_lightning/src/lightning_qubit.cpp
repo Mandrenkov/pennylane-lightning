@@ -29,7 +29,7 @@ VectorXcd apply (
         throw std::invalid_argument("Must specify one or more qubits");
 
     switch (qubits) {
-    case 1: return apply_ops_mvp(state, ops, wires, params);
+    case 1: return QubitOperations<1>::apply(state, ops, wires, params);
     case 2: return QubitOperations<2>::apply(state, ops, wires, params);
     case 3: return QubitOperations<3>::apply(state, ops, wires, params);
     case 4: return QubitOperations<4>::apply(state, ops, wires, params);

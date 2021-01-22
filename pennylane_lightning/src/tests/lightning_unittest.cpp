@@ -1074,3 +1074,14 @@ TEST(QubitPositions, MultipleRandomOrderUnique2) {
     EXPECT_TRUE(expected_qubit_positions == qubit_positions);
 }
 }  // namespace auxiliary_functions
+
+namespace auxiliary_functions {
+TEST(MVPApply, first) {
+    std::vector<int> tensor_indices({1, 3, 2, 0});
+    std::vector<int> qubit_positions = calculate_qubit_positions(tensor_indices);
+
+    std::vector<int> expected_qubit_positions({3, 0, 2, 1});
+
+    EXPECT_TRUE(expected_qubit_positions == qubit_positions);
+}
+}  // namespace auxiliary_functions
