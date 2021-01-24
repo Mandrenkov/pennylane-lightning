@@ -64,9 +64,6 @@ test-cpp:
 	GOOGLETEST_DIR=$(HOME)/googletest make -C pennylane_lightning/src/tests test
 
 benchmark:
-	g++ benchmark.cpp -I/usr/include/eigen3 pennylane_lightning/src/lightning_qubit.cpp -std=c++11 -isystem benchmark/include \
-	  -Lbenchmark/build/src -lbenchmark -lpthread -o lightning_benchmark
+	g++ benchmark.cpp -I/usr/include/eigen3 pennylane_lightning/src/lightning_qubit.cpp pennylane_lightning/src/operations.cpp \
+	-std=c++11 -isystem benchmark/include -Lbenchmark/build/src -lbenchmark -lpthread -o lightning_benchmark
 	./lightning_benchmark
-
-benchmark-noeigen:
-	g++ -I/usr/include/eigen3 benchmark.cpp -fpermissive -pg -O3
