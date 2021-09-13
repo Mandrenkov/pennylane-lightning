@@ -32,9 +32,8 @@
 
 #if __has_include(<cblas.h>) && defined _ENABLE_BLAS
 #include <cblas.h>
-#define USE_CBLAS 1
+#define USE_CBLAS ;
 #else
-#define USE_CBLAS 0
 #endif
 
 namespace Pennylane {
@@ -202,17 +201,17 @@ std::complex<T> innerProd(const std::complex<T> *data_1,
                           const size_t data_size) {
     std::complex<T> result(0, 0);
 
-    if constexpr (USE_CBLAS) {
-        if constexpr (std::is_same_v<T, float>)
-            result = cblas_cdotu_sub(data_size, data_1, 1, data_2, 1, &result);
-        else if constexpr (std::is_same_v<T, double>)
-            result = cblas_zdotu_sub(data_size, data_1, 1, data_2, 1, &result);
-    } else {
-        result = std::inner_product(
-            data_1, data_1 + data_size, data_2, std::complex<T>(), ConstSum<T>,
-            static_cast<std::complex<T> (*)(std::complex<T>, std::complex<T>)>(
-                &ConstMult<T>));
-    }
+#ifdef USE_CBLAS
+    if constexpr (std::is_same_v<T, float>)
+        cblas_cdotu_sub(data_size, data_1, 1, data_2, 1, &result);
+    else if constexpr (std::is_same_v<T, double>)
+        cblas_zdotu_sub(data_size, data_1, 1, data_2, 1, &result);
+#else
+    result = std::inner_product(
+        data_1, data_1 + data_size, data_2, std::complex<T>(), ConstSum<T>,
+        static_cast<std::complex<T> (*)(std::complex<T>, std::complex<T>)>(
+            &ConstMult<T>));
+#endif
     return result;
 }
 
@@ -231,16 +230,16 @@ std::complex<T> innerProdC(const std::complex<T> *data_1,
                            const size_t data_size) {
     std::complex<T> result(0, 0);
 
-    if constexpr (USE_CBLAS) {
-        if constexpr (std::is_same_v<T, float>)
-            result = cblas_cdotc_sub(data_size, data_1, 1, data_2, 1, &result);
-        else if constexpr (std::is_same_v<T, double>)
-            result = cblas_zdotc_sub(data_size, data_1, 1, data_2, 1, &result);
-    } else {
-        result = std::inner_product(data_1, data_1 + data_size, data_2,
-                                    std::complex<T>(), ConstSum<T>,
-                                    ConstMultConj<T>);
-    }
+#ifdef USE_CBLAS
+    if constexpr (std::is_same_v<T, float>)
+        cblas_cdotc_sub(data_size, data_1, 1, data_2, 1, &result);
+    else if constexpr (std::is_same_v<T, double>)
+        cblas_zdotc_sub(data_size, data_1, 1, data_2, 1, &result);
+#else
+    result =
+        std::inner_product(data_1, data_1 + data_size, data_2,
+                           std::complex<T>(), ConstSum<T>, ConstMultConj<T>);
+#endif
     return result;
 }
 
@@ -254,6 +253,125 @@ template <class T>
 inline std::complex<T> innerProdC(const std::vector<std::complex<T>> &data_1,
                                   const std::vector<std::complex<T>> &data_2) {
     return innerProdC(data_1.data(), data_2.data(), data_1.size());
+}
+
+/**
+ * @brief Utility method for performing complex matrix-vector multiplication as
+ * C[n] = A[m][n] * B[n]. Offloads to BLAS if enabled, otherwise defaults to
+ * naive O(n^2) multiplication kernel. Transposes indices of matrix A if flag is
+ * set.
+ *
+ * @tparam T
+ * @param mat_left Left matrix, A in row-major format.
+ * @param vec_right Right vector, B.
+ * @param vec_out Output vector, C.
+ * @param m Row-size of matrix A.
+ * @param n Column size of matrix A, vector B, and output vector C.
+ * @param transpose Transpose indices of matrix A prior to calculating C index
+ * value.
+ * @return std::complex<T>
+ */
+template <class T>
+void MatVecProd(const std::complex<T> *mat_left,
+                const std::complex<T> *vec_right, std::complex<T> *vec_out,
+                size_t m, size_t n, bool transpose = false) {
+    const auto alpha = ONE<T>();
+    const auto beta = ZERO<T>();
+
+#ifdef USE_CBLAS
+    const auto tp = (transpose) ? CblasTrans : CblasNoTrans;
+    if constexpr (std::is_same_v<T, float>)
+        cblas_cgemv(CblasRowMajor, tp, m, n, &alpha, mat_left, std::max(1ul, m),
+                    vec_right, 1, &beta, vec_out, 1);
+    else if constexpr (std::is_same_v<T, double>)
+        cblas_zgemv(CblasRowMajor, tp, m, n, &alpha, mat_left, std::max(1ul, m),
+                    vec_right, 1, &beta, vec_out, 1);
+#else // If not using BLAS, perform naive multiplication ops;
+    std::fill_n(vec_out, n, beta);
+    if (!transpose) {
+        for (size_t row = 0; row < m; row++) {
+            for (size_t col = 0; col < n; col++) {
+                vec_out[col] += mat_left[row * n + col] * vec_right[col];
+            }
+        }
+    } else {
+        for (size_t row = 0; row < m; row++) {
+            for (size_t col = 0; col < n; col++) {
+                vec_out[col] += mat_left[col * m + row] * vec_right[col];
+            }
+        }
+    }
+#endif
+}
+
+template <class T>
+std::complex<T> MatVecProd(const std::complex<T> &mat_left,
+                           const std::complex<T> *vec_right,
+                           std::complex<T> *vec_out, size_t m, size_t n,
+                           bool transpose = false);
+
+/**
+ * @brief Utility method for performing complex matrix-matrix multiplication as
+ * C[m][n] = A[m][k] * B[k][n]. Offloads to BLAS if enabled, otherwise defaults
+ * to naive O(n^3) multiplication kernel. Transposes indices of matrix B if flag
+ * is set.
+ *
+ * @tparam T Complex precision. `float` and `double` are supported.
+ * @param mat_left Left matrix, A in row-major format. Rows and cols are of size
+ * m * k. Indices transposed if requested.
+ * @param mat_right Right matrix, B in row-major format. Rows and cols are of
+ * size k * n;
+ * @param mat_out Output matrix, C in row-major format. Rows and cols are of
+ * size m * n.
+ * @param m Row-size of matrix A, and output matrix C.
+ * @param n Column size of matrix B, and output matrix C.
+ * @param k Column size of matrix A, and row size of matrix B.
+ * @param transpose Indicates whether indices of matrix B are to be transposed
+ * before calculating C index.
+ * @return std::complex<T>
+ */
+template <class T>
+void MatMatProd(const std::complex<T> *mat_left,
+                const std::complex<T> *mat_right, std::complex<T> *mat_out,
+                size_t m, size_t n, size_t k, bool transpose = false) {
+    const auto alpha = ONE<T>();
+    const auto beta = ZERO<T>();
+
+#ifdef USE_CBLAS
+    std::cout << "I GOT HERE!!!" << std::endl;
+
+    const auto tp = (transpose) ? CblasTrans : CblasNoTrans;
+
+    if constexpr (std::is_same_v<T, float>)
+        cblas_cgemm(CblasRowMajor, tp, CblasNoTrans, m, n, k, &alpha, mat_left,
+                    std::max(1ul, k), mat_right, std::max(1ul, n), &beta,
+                    mat_out, std::max(1ul, n));
+    else if constexpr (std::is_same_v<T, double>)
+        cblas_zgemm(CblasRowMajor, tp, CblasNoTrans, m, n, k, &alpha, mat_left,
+                    std::max(1ul, k), mat_right, std::max(1ul, n), &beta,
+                    mat_out, std::max(1ul, n));
+#else // If not using BLAS, perform naive multiplication ops;
+    std::fill_n(mat_out, m * n, beta);
+    if (!transpose) {
+        for (size_t row = 0; row < m; row++) {
+            for (size_t col = 0; col < n; col++) {
+                for (size_t inner = 0; inner < k; inner++) {
+                    mat_out[row * n + col] +=
+                        mat_left[row * k + inner] * mat_right[inner * n + col];
+                }
+            }
+        }
+    } else {
+        for (size_t row = 0; row < m; row++) {
+            for (size_t col = 0; col < n; col++) {
+                for (size_t inner = 0; inner < k; inner++) {
+                    mat_out[row * n + col] +=
+                        mat_left[inner * m + row] * mat_right[inner * n + col];
+                }
+            }
+        }
+    }
+#endif
 }
 
 template <class T>

@@ -1,6 +1,8 @@
 #include <complex>
 #include <vector>
 
+#include "Util.hpp"
+
 /**
  * @brief Utility function to compare complex statevector data.
  *
@@ -63,4 +65,32 @@ void scaleVector(std::vector<std::complex<Data_t>> &data,
     std::transform(
         data.begin(), data.end(), data.begin(),
         [scalar](const std::complex<Data_t> &c) { return c * scalar; });
+}
+
+/**
+ * @brief Naive commutator operation generator for testing-use only.
+ *
+ * @tparam Data_t
+ * @param left_op
+ * @param right_op
+ * @param tpose
+ * @return std::vector<std::complex<Data_t>>
+ */
+template <class Data_t>
+std::vector<std::complex<Data_t>>
+commutator(const std::vector<std::complex<Data_t>> &left_op,
+           const std::vector<std::complex<Data_t>> &right_op,
+           bool tpose = false) {
+    using namespace Pennylane::Util;
+    std::vector<std::complex<Data_t>> out1(4, {0, 0});
+    std::vector<std::complex<Data_t>> out2(
+        4, {0, 0}); // To be replaced with use of BLAS beta
+    MatMatProd<Data_t>(left_op.data(), right_op.data(), out1.data(), 2, 2, 2,
+                       tpose);
+    MatMatProd<Data_t>(right_op.data(), left_op.data(), out2.data(), 2, 2, 2,
+                       tpose);
+    std::transform(out2.cbegin(), out2.cend(), out2.begin(), std::negate<>{});
+    std::transform(out1.begin(), out1.end(), out2.begin(), out1.begin(),
+                   std::plus<std::complex<Data_t>>());
+    return out1;
 }

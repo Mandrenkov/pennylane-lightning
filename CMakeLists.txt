@@ -49,6 +49,8 @@ target_include_directories(pennylane_lightning INTERFACE "pennylane_lightning/sr
 add_library(external_dependency INTERFACE)
 
 if ("$ENV{USE_OPENBLAS}" OR "${USE_OPENBLAS}")
+    target_compile_options(pennylane_lightning INTERFACE "-D_ENABLE_BLAS=1")
+    target_compile_options(external_dependency INTERFACE "-D_ENABLE_BLAS=1")
     message(STATUS "Use OPENBLAS")
     target_link_libraries(external_dependency INTERFACE openblas)
     target_compile_options(external_dependency INTERFACE "-DOPENBLAS=1")
