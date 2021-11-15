@@ -14,6 +14,12 @@
 """
 Unit tests for the :mod:`pennylane_lightning.LightningQubit` device.
 """
+<<<<<<< HEAD
+=======
+import cmath
+import math
+
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
 # pylint: disable=protected-access,cell-var-from-loop
 import math
 
@@ -325,6 +331,7 @@ class TestApply:
             [0, 1 / math.sqrt(2), 0, -1 / 2 + 1j / 2],
             [-math.pi / 2, math.pi, math.pi],
         ),
+<<<<<<< HEAD
         (
             qml.ControlledPhaseShift,
             [1, 0, 0, 0],
@@ -355,6 +362,8 @@ class TestApply:
             [1 / math.sqrt(2), 1 / math.sqrt(2), 1 / math.sqrt(2), 1 / 2 + 1j / 2],
             [math.pi / 4],
         ),
+=======
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
     ]
 
     @pytest.mark.parametrize(
@@ -911,16 +920,23 @@ class TestLightningQubitIntegration:
             ("CRot", [math.pi / 2, 0, -math.pi], [-1 / 2, -1 / 2]),
             ("CRot", [0, math.pi / 2, -math.pi], [-1 / 2, 1 / 4]),
             ("CRot", [-math.pi, 0, math.pi / 2], [-1 / 2, -1 / 2]),
+<<<<<<< HEAD
             ("ControlledPhaseShift", [0], [-1 / 2, -1 / 2]),
             ("ControlledPhaseShift", [-math.pi], [-1 / 2, -1 / 2]),
             ("ControlledPhaseShift", [math.pi / 2], [-1 / 2, -1 / 2]),
             ("ControlledPhaseShift", [math.pi], [-1 / 2, -1 / 2]),
+=======
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
         ],
     )
     def test_supported_gate_two_wires_with_parameters(
         self, qubit_device_2_wires, tol, name, par, expected_output
     ):
+<<<<<<< HEAD
         """Tests supported gates that act on two wires that are parameterized"""
+=======
+        """Tests supported gates that act on two wires wires that are parameterized"""
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
 
         op = getattr(qml.ops, name)
 
@@ -1017,7 +1033,11 @@ class TestLightningQubitIntegration:
         the correct dimensions
         """
 
+<<<<<<< HEAD
         dev = qml.device("lightning.qubit", wires=num_wires, shots=1000)
+=======
+        dev = qml.device("lightning.qubit", wires=num_wires)
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
 
         @qml.qnode(dev)
         def circuit():
@@ -1169,10 +1189,13 @@ class TestTensorVar:
         assert np.allclose(res, expected, atol=tol, rtol=0)
 
 
+<<<<<<< HEAD
 # Tolerance for non-analytic tests
 TOL_STOCHASTIC = 0.05
 
 
+=======
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
 @pytest.mark.parametrize("theta, phi, varphi", list(zip(THETA, PHI, VARPHI)))
 @pytest.mark.parametrize("shots", [None, 100000])
 class TestTensorSample:
@@ -1261,10 +1284,37 @@ class TestTensorSample:
         assert np.allclose(var, expected, atol=tolerance, rtol=0)
 
 
+<<<<<<< HEAD
 def test_warning():
     """Tests if a warning is raised when lightning.qubit binaries are not available"""
     if CPP_BINARY_AVAILABLE:
         pytest.skip("Test only applies when binaries are unavailable")
+=======
+            def __init__(self, wires, *args, **kwargs):
+                """Mock __init__ method."""
+                self.num_wires = wires
+
+        with monkeypatch.context() as m:
+            # Mock the DefaultQubit class to avoid an extensive memory allocation
+            m.setattr(
+                pennylane_lightning.lightning_qubit.DefaultQubit,
+                "__init__",
+                MockDefaultQubit.__init__,
+            )
+            with pytest.warns(UserWarning, match="The number of wires exceeds"):
+                pennylane_lightning.lightning_qubit.LightningQubit(
+                    wires=LightningQubit._MAX_WIRES + 1
+                )
+
+    def test_apply(self, mocker):
+        """Test that the apply method uses the one in default.qubit when the number of wires
+        exceeds the supported number."""
+        mocker.patch("pennylane.devices.DefaultQubit.apply")
+
+        dev = qml.device("lightning.qubit", wires=2)
+        dev.num_wires = LightningQubit._MAX_WIRES + 1
+        dev.apply(0, rotations=1, other=2)
+>>>>>>> 734897884bad5e9051bdbcfa6d0cb48a694d7776
 
     with pytest.warns(UserWarning, match="Pre-compiled binaries for lightning.qubit"):
         qml.device("lightning.qubit", wires=1)

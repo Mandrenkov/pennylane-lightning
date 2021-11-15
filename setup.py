@@ -74,13 +74,13 @@ class BuildExt(build_ext):
     """A custom build extension for adding compiler-specific options."""
 
     c_opts = {
-        "msvc": ["/EHsc", "/O2", "/W4", "/WX", "/std:c++17", "-D_USE_MATH_DEFINES"],
-        "unix": ["-O3", "-fPIC", "-shared", "-fopenmp", "-Wall", "-Wextra", "-Werror"],
+        "msvc": ["-EHsc", "-O2", "-W1", "-std:c++11"],
+        "unix": ["-O3", "-W", "-fPIC", "-shared", "-fopenmp"],
     }
 
     l_opts = {
-        "msvc": ["/WX"],
-        "unix": ["-O3", "-fPIC", "-shared", "-fopenmp", "-Wall", "-Wextra", "-Werror"],
+        "msvc": [],
+        "unix": ["-O3", "-W", "-fPIC", "-shared", "-fopenmp"],
     }
     if platform.system() == "Linux" and platform.machine() == "x86_64":
         c_opts["unix"].append("-mavx")
@@ -175,6 +175,29 @@ if not os.environ.get("SKIP_COMPILATION", False):
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,
         ),
+        Extension(
+            "lightning_qubit_new_ops",
+            sources=[
+                "pennylane_lightning/src/rework/Apply.cpp",
+                "pennylane_lightning/src/rework/GateFactory.cpp",
+                "pennylane_lightning/src/rework/Gates.cpp",
+                "pennylane_lightning/src/rework/StateVector.cpp",
+            ],
+            depends=[
+                "pennylane_lightning/src/rework/Apply.hpp",
+                "pennylane_lightning/src/rework/GateFactory.hpp",
+                "pennylane_lightning/src/rework/Gates.hpp",
+                "pennylane_lightning/src/rework/StateVector.hpp",
+                "pennylane_lightning/src/rework/typedefs.hpp",
+                "pennylane_lightning/src/rework/Util.hpp",
+            ],
+            include_dirs=include_dirs,
+            language="c++",
+            libraries=libraries,
+            library_dirs=library_dirs,
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args,
+        ),
     ]
 else:
     ext_modules = []
@@ -196,6 +219,7 @@ info = {
     "entry_points": {
         "pennylane.plugins": [
             "lightning.qubit = pennylane_lightning:LightningQubit",
+            "lightning.qubit.new = pennylane_lightning:LightningQubitNew",
         ],
     },
     "description": "PennyLane-Lightning plugin",
