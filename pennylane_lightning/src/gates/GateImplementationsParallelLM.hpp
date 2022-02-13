@@ -678,6 +678,47 @@ class GateImplementationsParallelLM
         }
     }
 
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyCRot(std::complex<PrecisionT> *arr, size_t num_qubits,
+                          const std::vector<size_t> &wires, bool inverse,
+                          ParamT phi, ParamT theta, ParamT omega) {
+        assert(wires.size() == 2);
+
+        const size_t rev_wire0 = num_qubits - wires[1] - 1;
+        const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+        const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
+        const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
+
+        const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
+        const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
+
+        const size_t parity_low = fillTrailingOnes(rev_wire_min);
+        const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
+        const size_t parity_middle =
+            fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
+
+        const auto rotMat =
+            (inverse) ? Gates::getRot<PrecisionT>(-omega, -theta, -phi)
+                      : Gates::getRot<PrecisionT>(phi, theta, omega);
+
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
+                 rev_wire0_shift, rev_wire1_shift, arr, rotMat)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+
+            const std::complex<PrecisionT> v0 = arr[i10];
+            const std::complex<PrecisionT> v1 = arr[i11];
+            arr[i10] = rotMat[0] * v0 + rotMat[1] * v1;
+            arr[i11] = rotMat[2] * v0 + rotMat[3] * v1;
+        }
+    }
+
+
     template <class PrecisionT>
     static void applySWAP(std::complex<PrecisionT> *arr, size_t num_qubits,
                           const std::vector<size_t> &wires,
