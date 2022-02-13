@@ -62,8 +62,7 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
         GateOperation::CRZ,     GateOperation::CRot,
         GateOperation::IsingXX, GateOperation::IsingYY,
         GateOperation::IsingZZ, GateOperation::MultiRZ,
-        GateOperation::Matrix
-    };
+        GateOperation::Matrix};
 
     constexpr static std::array implemented_generators = {
         GeneratorOperation::RX,
@@ -653,7 +652,6 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
             arr[i11] = rotMat[2] * v0 + rotMat[3] * v1;
         }
     }
-
 
     template <class PrecisionT>
     static void applySWAP(std::complex<PrecisionT> *arr, size_t num_qubits,
