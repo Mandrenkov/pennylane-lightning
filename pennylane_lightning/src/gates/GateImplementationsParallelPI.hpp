@@ -1,4 +1,4 @@
-// Copyright 2021 Xanadu Quantum Technologies Inc.
+// Copyright 2022 Xanadu Quantum Technologies Inc.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,10 +53,13 @@ class GateImplementationsParallelPI
     constexpr static uint32_t data_alignment_in_bytes = 1;
 
     constexpr static std::array implemented_gates = {
-        GateOperation::PauliX,     GateOperation::PauliY, GateOperation::PauliZ,
-        GateOperation::Hadamard,   GateOperation::S,      GateOperation::T,
-        GateOperation::RX,         GateOperation::RY,     GateOperation::RZ,
-        GateOperation::PhaseShift,
+        GateOperation::PauliX,  GateOperation::PauliY,
+        GateOperation::PauliZ,  GateOperation::Hadamard,
+        GateOperation::S,       GateOperation::T,
+        GateOperation::RX,      GateOperation::RY,
+        GateOperation::RZ,      GateOperation::PhaseShift,
+        GateOperation::IsingXX, GateOperation::IsingYY,
+        GateOperation::IsingZZ,
     };
     constexpr static std::array<GeneratorOperation, 0> implemented_generators =
         {};
@@ -67,20 +70,13 @@ class GateImplementationsParallelPI
                             const std::vector<size_t> &wires,
                             [[maybe_unused]] bool inverse) {
         assert(wires.size() == 1);
-        if (num_qubits < 4) {
-            GateImplementationsPI::applyPauliX(arr, num_qubits, wires, inverse);
-            return;
-        }
         const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                std::swap(shiftedState[indices[0]], shiftedState[indices[1]]);
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            std::swap(shiftedState[indices[0]], shiftedState[indices[1]]);
         }
     }
 
@@ -89,25 +85,18 @@ class GateImplementationsParallelPI
                             const std::vector<size_t> &wires,
                             [[maybe_unused]] bool inverse) {
         assert(wires.size() == 1);
-        if (num_qubits < 4) {
-            GateImplementationsPI::applyPauliY(arr, num_qubits, wires, inverse);
-            return;
-        }
         const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                std::complex<PrecisionT> v0 = shiftedState[indices[0]];
-                shiftedState[indices[0]] =
-                    std::complex<PrecisionT>{shiftedState[indices[1]].imag(),
-                                             -shiftedState[indices[1]].real()};
-                shiftedState[indices[1]] =
-                    std::complex<PrecisionT>{-v0.imag(), v0.real()};
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            std::complex<PrecisionT> v0 = shiftedState[indices[0]];
+            shiftedState[indices[0]] =
+                std::complex<PrecisionT>{shiftedState[indices[1]].imag(),
+                                         -shiftedState[indices[1]].real()};
+            shiftedState[indices[1]] =
+                std::complex<PrecisionT>{-v0.imag(), v0.real()};
         }
     }
 
@@ -116,20 +105,13 @@ class GateImplementationsParallelPI
                             const std::vector<size_t> &wires,
                             [[maybe_unused]] bool inverse) {
         assert(wires.size() == 1);
-        if (num_qubits < 4) {
-            GateImplementationsPI::applyPauliZ(arr, num_qubits, wires, inverse);
-            return;
-        }
         const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                shiftedState[indices[1]] = -shiftedState[indices[1]];
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            shiftedState[indices[1]] = -shiftedState[indices[1]];
         }
     }
 
@@ -138,28 +120,18 @@ class GateImplementationsParallelPI
                               const std::vector<size_t> &wires,
                               [[maybe_unused]] bool inverse) {
         assert(wires.size() == 1);
-        if (num_qubits < 4) {
-            GateImplementationsPI::applyHadamard(arr, num_qubits, wires,
-                                                 inverse);
-            return;
-        }
         const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
 
-                const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
-                const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
+            const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
+            const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
 
-                shiftedState[indices[0]] =
-                    Util::INVSQRT2<PrecisionT>() * (v0 + v1);
-                shiftedState[indices[1]] =
-                    Util::INVSQRT2<PrecisionT>() * (v0 - v1);
-            }
+            shiftedState[indices[0]] = Util::INVSQRT2<PrecisionT>() * (v0 + v1);
+            shiftedState[indices[1]] = Util::INVSQRT2<PrecisionT>() * (v0 - v1);
         }
     }
 
@@ -176,13 +148,10 @@ class GateImplementationsParallelPI
             (inverse) ? -Util::IMAG<PrecisionT>() : Util::IMAG<PrecisionT>();
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                shiftedState[indices[1]] *= shift;
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            shiftedState[indices[1]] *= shift;
         }
     }
 
@@ -203,13 +172,10 @@ class GateImplementationsParallelPI
                             0, static_cast<PrecisionT>(M_PI / 4)));
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                shiftedState[indices[1]] *= shift;
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            shiftedState[indices[1]] *= shift;
         }
     }
 
@@ -231,13 +197,10 @@ class GateImplementationsParallelPI
                     : std::exp(std::complex<PrecisionT>(0, angle));
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                shiftedState[indices[1]] *= s;
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            shiftedState[indices[1]] *= s;
         }
     }
 
@@ -258,20 +221,15 @@ class GateImplementationsParallelPI
             (inverse) ? -std::sin(-angle / 2) : std::sin(-angle / 2);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
-                const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
-                shiftedState[indices[0]] =
-                    c * v0 +
-                    js * std::complex<PrecisionT>{-v1.imag(), v1.real()};
-                shiftedState[indices[1]] =
-                    js * std::complex<PrecisionT>{-v0.imag(), v0.real()} +
-                    c * v1;
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
+            const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
+            shiftedState[indices[0]] =
+                c * v0 + js * std::complex<PrecisionT>{-v1.imag(), v1.real()};
+            shiftedState[indices[1]] =
+                js * std::complex<PrecisionT>{-v0.imag(), v0.real()} + c * v1;
         }
     }
 
@@ -292,16 +250,13 @@ class GateImplementationsParallelPI
             (inverse) ? -std::sin(angle / 2) : std::sin(angle / 2);
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
-                const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
-                shiftedState[indices[0]] = c * v0 - s * v1;
-                shiftedState[indices[1]] = s * v0 + c * v1;
-            }
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            const std::complex<PrecisionT> v0 = shiftedState[indices[0]];
+            const std::complex<PrecisionT> v1 = shiftedState[indices[1]];
+            shiftedState[indices[0]] = c * v0 - s * v1;
+            shiftedState[indices[1]] = s * v0 + c * v1;
         }
     }
 
@@ -327,14 +282,106 @@ class GateImplementationsParallelPI
             (inverse) ? std::conj(second) : second;
 
 #pragma omp parallel for
-        for (size_t n = 0; n < externalIndices.size(); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t i = 0; i < 8; i++) {
-                const size_t externalIndex = externalIndices[n + i];
-                std::complex<PrecisionT> *shiftedState = arr + externalIndex;
-                shiftedState[indices[0]] *= shift1;
-                shiftedState[indices[1]] *= shift2;
-            }
+        for (size_t n = 0; n < externalIndices.size(); n++) {
+            const size_t externalIndex = externalIndices[n];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+            shiftedState[indices[0]] *= shift1;
+            shiftedState[indices[1]] *= shift2;
+        }
+    }
+
+    /* Two qubit operators with a parameter */
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyIsingXX(std::complex<PrecisionT> *arr, size_t num_qubits,
+                             const std::vector<size_t> &wires, bool inverse,
+                             ParamT angle) {
+        using ComplexPrecisionT = std::complex<PrecisionT>;
+        assert(wires.size() == 2);
+        const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
+
+        const PrecisionT cr = std::cos(angle / 2);
+        const PrecisionT sj =
+            inverse ? -std::sin(angle / 2) : std::sin(angle / 2);
+
+#pragma omp parallel for
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+
+            const auto v0 = shiftedState[indices[0]];
+            const auto v1 = shiftedState[indices[1]];
+            const auto v2 = shiftedState[indices[2]];
+            const auto v3 = shiftedState[indices[3]];
+
+            shiftedState[indices[0]] = ComplexPrecisionT{
+                cr * real(v0) + sj * imag(v3), cr * imag(v0) - sj * real(v3)};
+            shiftedState[indices[1]] = ComplexPrecisionT{
+                cr * real(v1) + sj * imag(v2), cr * imag(v1) - sj * real(v2)};
+            shiftedState[indices[2]] = ComplexPrecisionT{
+                cr * real(v2) + sj * imag(v1), cr * imag(v2) - sj * real(v1)};
+            shiftedState[indices[3]] = ComplexPrecisionT{
+                cr * real(v3) + sj * imag(v0), cr * imag(v3) - sj * real(v0)};
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyIsingYY(std::complex<PrecisionT> *arr, size_t num_qubits,
+                             const std::vector<size_t> &wires, bool inverse,
+                             ParamT angle) {
+        using ComplexPrecisionT = std::complex<PrecisionT>;
+        assert(wires.size() == 2);
+        const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
+
+        const PrecisionT cr = std::cos(angle / 2);
+        const PrecisionT sj =
+            inverse ? -std::sin(angle / 2) : std::sin(angle / 2);
+
+#pragma omp parallel for
+        for (size_t n = 0; n < externalIndices.size(); n++) {
+            const size_t externalIndex = externalIndices[n];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+
+            const auto v0 = shiftedState[indices[0]];
+            const auto v1 = shiftedState[indices[1]];
+            const auto v2 = shiftedState[indices[2]];
+            const auto v3 = shiftedState[indices[3]];
+
+            shiftedState[indices[0]] = ComplexPrecisionT{
+                cr * real(v0) - sj * imag(v3), cr * imag(v0) + sj * real(v3)};
+            shiftedState[indices[1]] = ComplexPrecisionT{
+                cr * real(v1) + sj * imag(v2), cr * imag(v1) - sj * real(v2)};
+            shiftedState[indices[2]] = ComplexPrecisionT{
+                cr * real(v2) + sj * imag(v1), cr * imag(v2) - sj * real(v1)};
+            shiftedState[indices[3]] = ComplexPrecisionT{
+                cr * real(v3) - sj * imag(v0), cr * imag(v3) + sj * real(v0)};
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyIsingZZ(std::complex<PrecisionT> *arr, size_t num_qubits,
+                             const std::vector<size_t> &wires, bool inverse,
+                             ParamT angle) {
+        assert(wires.size() == 2);
+        const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
+
+        const std::complex<PrecisionT> first =
+            std::complex<PrecisionT>{std::cos(angle / 2), -std::sin(angle / 2)};
+        const std::complex<PrecisionT> second =
+            std::complex<PrecisionT>{std::cos(angle / 2), std::sin(angle / 2)};
+
+        const std::array<std::complex<PrecisionT>, 2> shifts = {
+            (inverse) ? std::conj(first) : first,
+            (inverse) ? std::conj(second) : second};
+
+#pragma omp parallel for
+        for (size_t k = 0; k < externalIndices.size(); k++) {
+            const size_t externalIndex = externalIndices[k];
+            std::complex<PrecisionT> *shiftedState = arr + externalIndex;
+
+            shiftedState[indices[0]] *= shifts[0];
+            shiftedState[indices[1]] *= shifts[1];
+            shiftedState[indices[2]] *= shifts[1];
+            shiftedState[indices[3]] *= shifts[0];
         }
     }
 };

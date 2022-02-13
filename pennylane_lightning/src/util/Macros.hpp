@@ -25,10 +25,16 @@
 
 #if defined(__AVX512F__)
 #define PL_USE_AVX512F 1
+[[maybe_unused]] static constexpr bool use_avx512f = true;
+#else
+[[maybe_unused]] static constexpr bool use_avx512f = false;
 #endif
 
 #if defined(_OPENMP)
 #define PL_USE_OMP 1
+[[maybe_unused]] static constexpr bool use_openmp = true;
+#else
+[[maybe_unused]] static constexpr bool use_openmp = false;
 #endif
 
 #if (_OPENMP >= 202011)

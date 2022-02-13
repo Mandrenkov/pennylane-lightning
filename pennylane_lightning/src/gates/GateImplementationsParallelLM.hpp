@@ -63,7 +63,9 @@ class GateImplementationsParallelLM
         GateOperation::CZ,      GateOperation::SWAP,
         GateOperation::IsingXX, GateOperation::IsingYY,
         GateOperation::IsingZZ, GateOperation::ControlledPhaseShift,
-        GateOperation::MultiRZ};
+        GateOperation::CRX,     GateOperation::CRY,
+        GateOperation::CRZ,     GateOperation::MultiRZ,
+        GateOperation::Matrix};
 
     constexpr static std::array<GeneratorOperation, 0> implemented_generators =
         {};
@@ -272,13 +274,13 @@ class GateImplementationsParallelLM
             applyTwoQubitOp(arr, num_qubits, matrix, wires, inverse);
             break;
         default: {
-            const size_t dim = 1U << wires.size();
-#pragma omp parallel
+#pragma omp parallel default(none)                                             \
+    firstprivate(arr, num_qubits, matrix, inverse) shared(wires)
             {
+                const size_t dim = 1U << wires.size();
                 std::vector<size_t> indices;
                 indices.resize(dim);
 
-                // I am not sure is this faster...
 #pragma omp for
                 for (size_t k = 0; k < Util::exp2(num_qubits); k += dim) {
                     std::vector<std::complex<PrecisionT>> coeffs_in(dim);
@@ -703,12 +705,6 @@ class GateImplementationsParallelLM
         using std::real;
         assert(wires.size() == 2);
 
-        if (num_qubits < 5) {
-            GateImplementationsLM::applyIsingYY(arr, num_qubits, wires, inverse,
-                                                angle);
-            return;
-        }
-
         const size_t rev_wire0 = num_qubits - wires[1] - 1;
         const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
 
@@ -729,31 +725,26 @@ class GateImplementationsParallelLM
 #pragma omp parallel for default(none)                                         \
     firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
                  rev_wire0_shift, rev_wire1_shift, cr, sj, arr)
-        for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t idx = 0; idx < 8; idx++) {
-                const size_t k = n + idx;
-                const size_t i00 = ((k << 2U) & parity_high) |
-                                   ((k << 1U) & parity_middle) |
-                                   (k & parity_low);
-                const size_t i10 = i00 | rev_wire1_shift;
-                const size_t i01 = i00 | rev_wire0_shift;
-                const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i01 = i00 | rev_wire0_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
 
-                const ComplexPrecisionT v00 = arr[i00];
-                const ComplexPrecisionT v01 = arr[i01];
-                const ComplexPrecisionT v10 = arr[i10];
-                const ComplexPrecisionT v11 = arr[i11];
+            const ComplexPrecisionT v00 = arr[i00];
+            const ComplexPrecisionT v01 = arr[i01];
+            const ComplexPrecisionT v10 = arr[i10];
+            const ComplexPrecisionT v11 = arr[i11];
 
-                arr[i00] = ComplexPrecisionT{cr * real(v00) - sj * imag(v11),
-                                             cr * imag(v00) + sj * real(v11)};
-                arr[i01] = ComplexPrecisionT{cr * real(v01) + sj * imag(v10),
-                                             cr * imag(v01) - sj * real(v10)};
-                arr[i10] = ComplexPrecisionT{cr * real(v10) + sj * imag(v01),
-                                             cr * imag(v10) - sj * real(v01)};
-                arr[i11] = ComplexPrecisionT{cr * real(v11) - sj * imag(v00),
-                                             cr * imag(v11) + sj * real(v00)};
-            }
+            arr[i00] = ComplexPrecisionT{cr * real(v00) - sj * imag(v11),
+                                         cr * imag(v00) + sj * real(v11)};
+            arr[i01] = ComplexPrecisionT{cr * real(v01) + sj * imag(v10),
+                                         cr * imag(v01) - sj * real(v10)};
+            arr[i10] = ComplexPrecisionT{cr * real(v10) + sj * imag(v01),
+                                         cr * imag(v10) - sj * real(v01)};
+            arr[i11] = ComplexPrecisionT{cr * real(v11) - sj * imag(v00),
+                                         cr * imag(v11) + sj * real(v00)};
         }
     }
 
@@ -762,12 +753,6 @@ class GateImplementationsParallelLM
     applyIsingZZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
                  const std::vector<size_t> &wires, bool inverse, ParamT angle) {
         assert(wires.size() == 2);
-
-        if (num_qubits < 5) {
-            GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires, inverse,
-                                                angle);
-            return;
-        }
 
         const size_t rev_wire0 = num_qubits - wires[1] - 1;
         const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
@@ -795,22 +780,146 @@ class GateImplementationsParallelLM
 #pragma omp parallel for default(none)                                         \
     firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
                  rev_wire0_shift, rev_wire1_shift, shifts, arr)
-        for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += 8) {
-            PL_UNROLL_LOOP
-            for (size_t idx = 0; idx < 8; idx++) {
-                const size_t k = n + idx;
-                const size_t i00 = ((k << 2U) & parity_high) |
-                                   ((k << 1U) & parity_middle) |
-                                   (k & parity_low);
-                const size_t i10 = i00 | rev_wire1_shift;
-                const size_t i01 = i00 | rev_wire0_shift;
-                const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i01 = i00 | rev_wire0_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
 
-                arr[i00] *= shifts[0];
-                arr[i01] *= shifts[1];
-                arr[i10] *= shifts[1];
-                arr[i11] *= shifts[0];
-            }
+            arr[i00] *= shifts[0];
+            arr[i01] *= shifts[1];
+            arr[i10] *= shifts[1];
+            arr[i11] *= shifts[0];
+        }
+    }
+
+    template <class PrecisionT, class ParamT>
+    static void applyCRX(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                         const std::vector<size_t> &wires, bool inverse,
+                         ParamT angle) {
+        assert(wires.size() == 2);
+
+        const PrecisionT c = std::cos(angle / 2);
+        const PrecisionT js =
+            (inverse) ? -std::sin(angle / 2) : std::sin(angle / 2);
+
+        const size_t rev_wire0 = num_qubits - wires[1] - 1;
+        const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+        const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
+        const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
+
+        const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
+        const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
+
+        const size_t parity_low = fillTrailingOnes(rev_wire_min);
+        const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
+        const size_t parity_middle =
+            fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
+
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
+                 rev_wire0_shift, rev_wire1_shift, arr, c, js)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+
+            const std::complex<PrecisionT> v10 = arr[i10];
+            const std::complex<PrecisionT> v11 = arr[i11];
+
+            arr[i10] = std::complex<PrecisionT>{
+                c * std::real(v10) + js * std::imag(v11),
+                c * std::imag(v10) - js * std::real(v11)};
+            arr[i11] = std::complex<PrecisionT>{
+                c * std::real(v11) + js * std::imag(v10),
+                c * std::imag(v11) - js * std::real(v10)};
+        }
+    }
+
+    template <class PrecisionT, class ParamT>
+    static void applyCRY(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                         const std::vector<size_t> &wires, bool inverse,
+                         ParamT angle) {
+        assert(wires.size() == 2);
+
+        const PrecisionT c = std::cos(angle / 2);
+        const PrecisionT s =
+            (inverse) ? -std::sin(angle / 2) : std::sin(angle / 2);
+
+        const size_t rev_wire0 = num_qubits - wires[1] - 1;
+        const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+        const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
+        const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
+
+        const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
+        const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
+
+        const size_t parity_low = fillTrailingOnes(rev_wire_min);
+        const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
+        const size_t parity_middle =
+            fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
+
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
+                 rev_wire0_shift, rev_wire1_shift, arr, c, s)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+
+            const std::complex<PrecisionT> v10 = arr[i10];
+            const std::complex<PrecisionT> v11 = arr[i11];
+
+            arr[i10] = c * v10 + -s * v11;
+            arr[i11] = s * v10 + c * v11;
+        }
+    }
+
+    template <class PrecisionT, class ParamT>
+    static void applyCRZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                         const std::vector<size_t> &wires, bool inverse,
+                         ParamT angle) {
+        assert(wires.size() == 2);
+
+        const std::complex<PrecisionT> first =
+            std::complex<PrecisionT>{std::cos(angle / 2), -std::sin(angle / 2)};
+        const std::complex<PrecisionT> second =
+            std::complex<PrecisionT>{std::cos(angle / 2), std::sin(angle / 2)};
+
+        const std::array<std::complex<PrecisionT>, 2> shifts = {
+            (inverse) ? std::conj(first) : first,
+            (inverse) ? std::conj(second) : second};
+
+        const size_t rev_wire0 = num_qubits - wires[1] - 1;
+        const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+        const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
+        const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
+
+        const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
+        const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
+
+        const size_t parity_low = fillTrailingOnes(rev_wire_min);
+        const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
+        const size_t parity_middle =
+            fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
+
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, parity_low, parity_middle, parity_high,           \
+                 rev_wire0_shift, rev_wire1_shift, arr, shifts)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i10 = i00 | rev_wire1_shift;
+            const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
+
+            arr[i10] *= shifts[0];
+            arr[i11] *= shifts[1];
         }
     }
 
