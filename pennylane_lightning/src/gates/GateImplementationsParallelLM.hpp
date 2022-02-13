@@ -58,7 +58,8 @@ class GateImplementationsParallelLM
         GateOperation::PauliZ,  GateOperation::Hadamard,
         GateOperation::S,       GateOperation::T,
         GateOperation::RX,      GateOperation::RY,
-        GateOperation::RZ,      GateOperation::Rot,
+        GateOperation::RZ,      GateOperation::PhaseShift,
+        GateOperation::Rot,
         GateOperation::CNOT,    GateOperation::CY,
         GateOperation::CZ,      GateOperation::SWAP,
         GateOperation::IsingXX, GateOperation::IsingYY,
@@ -447,6 +448,30 @@ class GateImplementationsParallelLM
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
             arr[i1] *= shift;
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyPhaseShift(std::complex<PrecisionT> *arr,
+                                const size_t num_qubits,
+                                const std::vector<size_t> &wires, bool inverse,
+                                ParamT angle) {
+        assert(wires.size() == 1);
+        const size_t rev_wire = num_qubits - wires[0] - 1;
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+        const std::complex<PrecisionT> s =
+            inverse ? std::exp(-std::complex<PrecisionT>(0, angle))
+                    : std::exp(std::complex<PrecisionT>(0, angle));
+
+#pragma omp parallel for default(none) firstprivate(                           \
+    num_qubits, rev_wire_shift, wire_parity, wire_parity_inv, s, arr)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+            arr[i1] *= s;
         }
     }
 

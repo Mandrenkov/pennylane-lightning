@@ -327,7 +327,7 @@ class GateImplementationsPI : public PauliGenerator<GateImplementationsPI> {
         assert(wires.size() == 1);
         const auto [indices, externalIndices] = GateIndices(wires, num_qubits);
 
-        const std::vector<std::complex<PrecisionT>> rot =
+        const auto rot =
             Gates::getRot<PrecisionT>(phi, theta, omega);
 
         const std::complex<PrecisionT> t1 =
