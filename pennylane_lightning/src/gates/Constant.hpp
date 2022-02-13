@@ -242,7 +242,7 @@ namespace Pennylane::Gates::Constant {
  * @brief Define which kernel to use for each generator operation.
  */
 [[maybe_unused]] constexpr std::array default_kernel_for_generators = {
-    std::pair{GeneratorOperation::PhaseShift, KernelType::PI},
+    std::pair{GeneratorOperation::PhaseShift, KernelType::LM},
     std::pair{GeneratorOperation::RX, KernelType::LM},
     std::pair{GeneratorOperation::RY, KernelType::LM},
     std::pair{GeneratorOperation::RZ, KernelType::LM},
@@ -250,8 +250,8 @@ namespace Pennylane::Gates::Constant {
     std::pair{GeneratorOperation::IsingYY, KernelType::LM},
     std::pair{GeneratorOperation::IsingZZ, KernelType::LM},
     std::pair{GeneratorOperation::CRX, KernelType::PI},
-    std::pair{GeneratorOperation::CRY, KernelType::PI},
-    std::pair{GeneratorOperation::CRZ, KernelType::PI},
+    std::pair{GeneratorOperation::CRY, KernelType::LM},
+    std::pair{GeneratorOperation::CRZ, KernelType::LM},
     std::pair{GeneratorOperation::ControlledPhaseShift, KernelType::PI},
     std::pair{GeneratorOperation::MultiRZ, KernelType::LM},
 };

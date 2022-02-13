@@ -38,6 +38,12 @@ namespace Pennylane::Gates {
  * @tparam PrecisionT Floating point precision of underlying statevector data
  */
 class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
+  private:
+    /* Alias utility functions */
+    static constexpr auto fillLeadingOnes = Util::fillLeadingOnes;
+    static constexpr auto fillTrailingOnes = Util::fillTrailingOnes;
+    static constexpr auto bitswap = Util::bitswap;
+
   public:
     constexpr static KernelType kernel_id = KernelType::LM;
     constexpr static std::string_view name = "LM";
@@ -58,19 +64,19 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
         GateOperation::MultiRZ, GateOperation::Matrix};
 
     constexpr static std::array implemented_generators = {
-        GeneratorOperation::RX,      GeneratorOperation::RY,
-        GeneratorOperation::RZ,      GeneratorOperation::PhaseShift,
-        GeneratorOperation::CRX,     GeneratorOperation::CRY,
-        GeneratorOperation::CRZ,     GeneratorOperation::IsingXX,
-        GeneratorOperation::IsingYY, GeneratorOperation::IsingZZ,
+        GeneratorOperation::RX,
+        GeneratorOperation::RY,
+        GeneratorOperation::RZ,
+        GeneratorOperation::PhaseShift,
+        GeneratorOperation::CRX,
+        GeneratorOperation::CRY,
+        GeneratorOperation::CRZ,
+        GeneratorOperation::IsingXX,
+        GeneratorOperation::IsingYY,
+        GeneratorOperation::IsingZZ,
+        GeneratorOperation::ControlledPhaseShift,
         GeneratorOperation::MultiRZ,
     };
-
-  private:
-    /* Alias utility functions */
-    static constexpr auto fillLeadingOnes = Util::fillLeadingOnes;
-    static constexpr auto fillTrailingOnes = Util::fillTrailingOnes;
-    static constexpr auto bitswap = Util::bitswap;
 
     /**
      * @brief Apply a single qubit gate to the statevector.
@@ -230,7 +236,6 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
         }
     }
 
-  public:
     template <class PrecisionT>
     static void applyMatrix(std::complex<PrecisionT> *arr, size_t num_qubits,
                             const std::complex<PrecisionT> *matrix,
@@ -1174,6 +1179,42 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
         }
         // NOLINTNEXTLINE(readability-magic-numbers)
         return -static_cast<PrecisionT>(0.5);
+    }
+
+    template <class PrecisionT>
+    [[nodiscard]] static auto applyGeneratorControlledPhaseShift(
+        std::complex<PrecisionT> *arr, size_t num_qubits,
+        const std::vector<size_t> &wires, [[maybe_unused]] bool adj)
+        -> PrecisionT {
+        using ComplexPrecisionT = std::complex<PrecisionT>;
+        assert(wires.size() == 2);
+
+        const size_t rev_wire0 = num_qubits - wires[1] - 1;
+        const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+        const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
+        const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
+
+        const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
+        const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
+
+        const size_t parity_low = fillTrailingOnes(rev_wire_min);
+        const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
+        const size_t parity_middle =
+            fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
+
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
+            const size_t i00 = ((k << 2U) & parity_high) |
+                               ((k << 1U) & parity_middle) | (k & parity_low);
+            const size_t i01 = i00 | rev_wire0_shift;
+            const size_t i10 = i00 | rev_wire1_shift;
+
+            arr[i00] = ComplexPrecisionT{};
+            arr[i01] = ComplexPrecisionT{};
+            arr[i10] = ComplexPrecisionT{};
+        }
+        // NOLINTNEXTLINE(readability-magic-numbers)
+        return static_cast<PrecisionT>(1);
     }
 
     template <class PrecisionT>

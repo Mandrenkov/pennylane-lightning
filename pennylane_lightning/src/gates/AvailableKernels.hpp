@@ -18,8 +18,13 @@
  */
 #pragma once
 
+#include "Macros.hpp"
+
 #include "GateImplementationsLM.hpp"
 #include "GateImplementationsPI.hpp"
+
+#include "GateImplementationsParallelLM.hpp"
+#include "GateImplementationsParallelPI.hpp"
 #include "TypeList.hpp"
 
 namespace Pennylane {
@@ -33,5 +38,10 @@ namespace Pennylane {
  * @endrst
  */
 using AvailableKernels =
-    Util::TypeList<Gates::GateImplementationsLM, Gates::GateImplementationsPI>;
+    Util::TypeList<Gates::GateImplementationsLM, Gates::GateImplementationsPI,
+#if PL_USE_OMP
+                   Gates::GateImplementationsParallelLM,
+                   Gates::GateImplementationsParallelPI,
+#endif
+                   void>;
 } // namespace Pennylane

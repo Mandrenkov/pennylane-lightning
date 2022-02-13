@@ -42,10 +42,6 @@ parseGateLists(std::string_view arg) {
     }
 
     if (arg.empty()) {
-        /*
-        return std::vector<std::pair<std::string_view, GateDesc>>(
-            available_gates_wires.begin(), available_gates_wires.end());
-        */
         return {};
     }
 
