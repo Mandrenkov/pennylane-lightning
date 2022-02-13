@@ -384,9 +384,21 @@ class GateImplementationsParallelLM
         assert(wires.size() == 1);
 
         constexpr auto isqrt2 = Util::INVSQRT2<PrecisionT>();
-        constexpr static std::array<std::complex<PrecisionT>, 4> hadamardMat = {
-            isqrt2, isqrt2, isqrt2, -isqrt2};
-        applySingleQubitOp(arr, num_qubits, hadamardMat.data(), wires[0]);
+        const size_t rev_wire = num_qubits - wires[0] - 1;
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+#pragma omp parallel for default(none) firstprivate(                           \
+    num_qubits, rev_wire_shift, wire_parity, wire_parity_inv, arr, isqrt2)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+            const std::complex<PrecisionT> v0 = arr[i0];
+            const std::complex<PrecisionT> v1 = arr[i1];
+            arr[i0] = isqrt2 * v0 + isqrt2 * v1;
+            arr[i1] = isqrt2 * v0 - isqrt2 * v1;
+        }
     }
 
     template <class PrecisionT>
@@ -443,13 +455,28 @@ class GateImplementationsParallelLM
                         const std::vector<size_t> &wires, bool inverse,
                         ParamT angle) {
         assert(wires.size() == 1);
+
+        const size_t rev_wire = num_qubits - wires[0] - 1;
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
         const PrecisionT c = std::cos(angle / 2);
         const PrecisionT js =
             (inverse) ? -std::sin(-angle / 2) : std::sin(-angle / 2);
 
-        const std::array<std::complex<PrecisionT>, 4> RXMat = {
-            c, Util::IMAG<PrecisionT>() * js, Util::IMAG<PrecisionT>() * js, c};
-        applySingleQubitOp(arr, num_qubits, RXMat.data(), wires[0]);
+#pragma omp parallel for default(none) firstprivate(                           \
+    num_qubits, rev_wire_shift, wire_parity, wire_parity_inv, arr, c, js)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+            const std::complex<PrecisionT> v0 = arr[i0];
+            const std::complex<PrecisionT> v1 = arr[i1];
+            arr[i0] = c * v0 +
+                      std::complex<PrecisionT>{-imag(v1) * js, real(v1) * js};
+            arr[i1] = std::complex<PrecisionT>{-imag(v0) * js, real(v0) * js} +
+                      c * v1;
+        }
     }
 
     template <class PrecisionT, class ParamT = PrecisionT>
@@ -458,12 +485,27 @@ class GateImplementationsParallelLM
                         ParamT angle) {
         assert(wires.size() == 1);
 
+        const size_t rev_wire = num_qubits - wires[0] - 1;
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
         const PrecisionT c = std::cos(angle / 2);
         const PrecisionT s =
             (inverse) ? -std::sin(angle / 2) : std::sin(angle / 2);
 
-        const std::array<std::complex<PrecisionT>, 4> RYMat = {c, -s, s, c};
-        applySingleQubitOp(arr, num_qubits, RYMat.data(), wires[0]);
+#pragma omp parallel for default(none) firstprivate(                           \
+    num_qubits, rev_wire_shift, wire_parity, wire_parity_inv, c, s, arr)
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+            const std::complex<PrecisionT> v0 = arr[i0];
+            const std::complex<PrecisionT> v1 = arr[i1];
+            arr[i0] = std::complex<PrecisionT>{c * real(v0) - s * real(v1),
+                                               c * imag(v0) - s * imag(v1)};
+            arr[i1] = std::complex<PrecisionT>{s * real(v0) + c * real(v1),
+                                               s * imag(v0) + c * imag(v1)};
+        }
     }
 
     template <class PrecisionT, class ParamT = PrecisionT>
