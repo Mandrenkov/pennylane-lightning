@@ -1,4 +1,4 @@
-#include "GateImplementationsPI.hpp"
+#include "cpu_kernels/GateImplementationsPI.hpp"
 #include "TestHelpers.hpp"
 
 #include <catch2/catch.hpp>

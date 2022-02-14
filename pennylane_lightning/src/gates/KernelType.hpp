@@ -25,7 +25,7 @@ namespace Pennylane::Gates {
 /**
  * @brief Define kernel id for each implementation.
  */
-enum class KernelType { PI, LM, ParallelPI, ParallelLM, None };
+enum class KernelType { PI, LM, ParallelPI, ParallelLM, AVX512, None };
 } // namespace Pennylane::Gates
 
 namespace Pennylane {

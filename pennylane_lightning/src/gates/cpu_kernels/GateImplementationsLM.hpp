@@ -287,9 +287,8 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
                             const size_t num_qubits,
                             const std::vector<size_t> &wires,
                             [[maybe_unused]] bool inverse) {
-        using Util::fillLeadingOnes, Util::fillTrailingOnes;
-
         assert(wires.size() == 1);
+
         const size_t rev_wire = num_qubits - wires[0] - 1;
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);

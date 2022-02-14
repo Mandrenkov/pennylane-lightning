@@ -1118,7 +1118,8 @@ class GateImplementationsParallelLM
                 (static_cast<size_t>(1U) << (num_qubits - wire - 1));
         }
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, wires_parity, shifts)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, wires_parity, shifts)
         for (size_t k = 0; k < Util::exp2(num_qubits); k++) {
             arr[k] *= shifts[Util::popcount(k & wires_parity) % 2];
         }
@@ -1135,7 +1136,8 @@ class GateImplementationsParallelLM
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, wire_parity, wire_parity_inv)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, wire_parity, wire_parity_inv)
         for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             arr[i0] = std::complex<PrecisionT>{0.0, 0.0};
@@ -1165,8 +1167,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1202,8 +1205,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1240,8 +1244,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1277,8 +1282,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1318,8 +1324,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1362,8 +1369,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1400,8 +1408,9 @@ class GateImplementationsParallelLM
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, \
-        parity_low, parity_middle, parity_high, rev_wire0_shift, rev_wire1_shift)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, parity_low, parity_middle, parity_high,      \
+                 rev_wire0_shift, rev_wire1_shift)
         for (size_t k = 0; k < Util::exp2(num_qubits - 2); k++) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
@@ -1427,7 +1436,8 @@ class GateImplementationsParallelLM
                 (static_cast<size_t>(1U) << (num_qubits - wire - 1));
         }
 
-#pragma omp parallel for default(none) firstprivate(num_qubits, arr, wires_parity)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(num_qubits, arr, wires_parity)
         for (size_t k = 0; k < Util::exp2(num_qubits); k++) {
             arr[k] *= (2 * int(Util::popcount(k & wires_parity) % 2) - 1);
         }

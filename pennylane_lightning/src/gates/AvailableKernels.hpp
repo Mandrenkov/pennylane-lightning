@@ -20,11 +20,13 @@
 
 #include "Macros.hpp"
 
-#include "GateImplementationsLM.hpp"
-#include "GateImplementationsPI.hpp"
+#include "cpu_kernels/GateImplementationsLM.hpp"
+#include "cpu_kernels/GateImplementationsPI.hpp"
 
-#include "GateImplementationsParallelLM.hpp"
-#include "GateImplementationsParallelPI.hpp"
+#if PL_USE_OMP
+#include "cpu_kernels/GateImplementationsParallelLM.hpp"
+#include "cpu_kernels/GateImplementationsParallelPI.hpp"
+#endif
 #include "TypeList.hpp"
 
 namespace Pennylane {

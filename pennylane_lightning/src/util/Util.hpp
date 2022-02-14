@@ -350,4 +350,18 @@ template <class T> struct remove_cvref {
 // type alias
 template <class T> using remove_cvref_t = typename remove_cvref<T>::type;
 
+/**
+ * @brief Iterate over all enum values (if BEGIN and END are defined).
+ *
+ * @tparam T enum type
+ * @tparam Func function to execute
+ */
+template <class T, class Func>
+void for_each_enum(Func&& func) {
+    for(auto e = T::BEGIN; e != T::END; 
+            e = static_cast<T>(std::underlying_type<T>(e) + 1)) {
+        func(e);
+    }
+}
+
 } // namespace Pennylane::Util

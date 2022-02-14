@@ -13,15 +13,44 @@
 // limitations under the License.
 /**
  * @file
- * Define all memory models used in statevectors
+ * Define keys to select kernels
  */
 #include "Macros.hpp"
 #include <cstdint>
 
 namespace Pennylane {
-enum class Device : uint8_t { CPUSingleThread, CPUMultiThread, GPU };
+enum class Threading : uint8_t {
+    SingleThread = 0B01,
+    MultiThread = 0B10,
+    BEGIN = SingleThread,
+    END
+};
 
-enum class CPUMemoryModel : uint8_t { Unaligned, Aligned256, Aligned512 };
+enum class CPUMemoryModel : uint8_t {
+    Unaligned = 0B001,
+    Aligned256 = 0B010,
+    Aligned512 = 0B100,
+    BEGIN = Unaligned,
+    END
+};
+
+constexpr uint32_t toDispatchKey(Threading threading, CPUMemoryModel memory_model) {
+    /* Threading is in higher priority */
+    return (static_cast<uint32_t>(threading) << 8U) | 
+        static_cast<uint32_t>(memory_model);
+}
+
+auto getMemoryModel(const void *ptr) -> CPUMemoryModel {
+    if ((reinterpret_cast<uintptr_t>(ptr) % 64) == 0) {
+        return CPUMemoryModel::Aligned512;
+    }
+
+    if ((reinterpret_cast<uintptr_t>(ptr) % 32) == 0) {
+        return CPUMemoryModel::Aligned256;
+    }
+
+    return CPUMemoryModel::Unaligned;
+}
 
 constexpr auto bestCPUMemoryModel() -> CPUMemoryModel {
     if constexpr (use_avx512f) {
@@ -29,5 +58,4 @@ constexpr auto bestCPUMemoryModel() -> CPUMemoryModel {
     }
     return CPUMemoryModel::Unaligned;
 }
-
 } // namespace Pennylane

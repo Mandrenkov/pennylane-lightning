@@ -232,7 +232,7 @@ namespace Pennylane::Gates::Constant {
     std::pair{GateOperation::CRX, KernelType::LM},
     std::pair{GateOperation::CRY, KernelType::LM},
     std::pair{GateOperation::CRZ, KernelType::LM},
-    std::pair{GateOperation::CRot, KernelType::PI},
+    std::pair{GateOperation::CRot, KernelType::LM},
     std::pair{GateOperation::Toffoli, KernelType::PI},
     std::pair{GateOperation::CSWAP, KernelType::PI},
     std::pair{GateOperation::MultiRZ, KernelType::LM},
