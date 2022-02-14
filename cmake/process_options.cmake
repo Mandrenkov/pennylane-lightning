@@ -58,6 +58,17 @@ if(ENABLE_AVX)
     target_compile_options(lightning_compile_options INTERFACE -mavx)
 endif()
 
+if(ENABLE_AVX2)
+    message(STATUS "ENABLE_AVX2 is ON.")
+    target_compile_options(lightning_compile_options INTERFACE -mavx2)
+endif()
+
+if(ENABLE_AVX512F)
+    message(STATUS "ENABLE_AVX512F is ON.")
+    target_compile_options(lightning_compile_options INTERFACE -mavx512f)
+endif()
+
+
 if(ENABLE_OPENMP)
     message(STATUS "ENABLE_OPENMP is ON. Using OpenMP.")
     find_package(OpenMP)

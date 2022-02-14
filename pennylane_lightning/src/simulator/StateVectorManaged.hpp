@@ -11,6 +11,7 @@
 #pragma once
 
 #include "BitUtil.hpp"
+#include "Memory.hpp"
 #include "StateVectorBase.hpp"
 #include "Util.hpp"
 
@@ -32,8 +33,9 @@ class StateVectorManaged
 
   private:
     using BaseType = StateVectorBase<PrecisionT, StateVectorManaged>;
+    using Allocator = AlignedAllocator<ComplexPrecisionT, 64>;
 
-    std::vector<ComplexPrecisionT> data_;
+    std::vector<ComplexPrecisionT, Allocator> data_;
 
   public:
     StateVectorManaged() : StateVectorBase<PrecisionT, StateVectorManaged>() {}
@@ -77,9 +79,11 @@ class StateVectorManaged
     auto operator=(StateVectorManaged<PrecisionT> &&other) noexcept
         -> StateVectorManaged<PrecisionT> & = default;
 
-    auto getDataVector() -> std::vector<ComplexPrecisionT> & { return data_; }
+    auto getDataVector() -> std::vector<ComplexPrecisionT, Allocator> & {
+        return data_;
+    }
     [[nodiscard]] auto getDataVector() const
-        -> const std::vector<ComplexPrecisionT> & {
+        -> const std::vector<ComplexPrecisionT, Allocator> & {
         return data_;
     }
 
@@ -94,7 +98,9 @@ class StateVectorManaged
      *
      * @param new_data std::vector contains data.
      */
-    void updateData(const std::vector<ComplexPrecisionT> &new_data) {
+    template <class AllocOther>
+    void
+    updateData(const std::vector<ComplexPrecisionT, AllocOther> &new_data) {
         PL_ABORT_IF_NOT(data_.size() == new_data.size(),
                         "New data must be the same size as old data.")
         std::copy(new_data.begin(), new_data.end(), data_.begin());

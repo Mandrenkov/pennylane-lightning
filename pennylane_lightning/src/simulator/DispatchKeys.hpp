@@ -34,10 +34,11 @@ enum class CPUMemoryModel : uint8_t {
     END
 };
 
-constexpr uint32_t toDispatchKey(Threading threading, CPUMemoryModel memory_model) {
+constexpr uint32_t toDispatchKey(Threading threading,
+                                 CPUMemoryModel memory_model) {
     /* Threading is in higher priority */
-    return (static_cast<uint32_t>(threading) << 8U) | 
-        static_cast<uint32_t>(memory_model);
+    return (static_cast<uint32_t>(threading) << 8U) |
+           static_cast<uint32_t>(memory_model);
 }
 
 auto getMemoryModel(const void *ptr) -> CPUMemoryModel {

@@ -356,12 +356,24 @@ template <class T> using remove_cvref_t = typename remove_cvref<T>::type;
  * @tparam T enum type
  * @tparam Func function to execute
  */
-template <class T, class Func>
-void for_each_enum(Func&& func) {
-    for(auto e = T::BEGIN; e != T::END; 
-            e = static_cast<T>(std::underlying_type<T>(e) + 1)) {
+template <class T, class Func> void for_each_enum(Func &&func) {
+    for (auto e = T::BEGIN; e != T::END;
+         e = static_cast<T>(std::underlying_type<T>(e) + 1)) {
         func(e);
     }
 }
+
+template <class TypeList> struct common_alignment {
+    constexpr static uint32_t value =
+        std::max(TypeList::Type::data_alignment_in_bytes,
+                 common_alignment<typename TypeList::Next>::value);
+};
+template <> struct common_alignment<void> {
+    constexpr static uint32_t value = 1U;
+};
+
+template <class TypeList>
+[[maybe_unused]] constexpr static uint32_t common_alignment_v =
+    common_alignment<TypeList>::value;
 
 } // namespace Pennylane::Util

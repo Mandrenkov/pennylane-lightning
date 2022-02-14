@@ -37,9 +37,8 @@ struct testDispatchForKernel {
             bool> = true>
     static void test(RandomEngine &re, size_t num_qubits) {
         using CFP_t = std::complex<PrecisionT>;
-        const std::vector<CFP_t> ini_st =
-            createRandomState<PrecisionT>(re, num_qubits);
-        std::vector<CFP_t> expected = ini_st;
+        const auto ini_st = createRandomState<PrecisionT>(re, num_qubits);
+        auto expected = ini_st;
 
         const auto wires = createWires(gate_op);
         const auto params = createParams<PrecisionT>(gate_op);

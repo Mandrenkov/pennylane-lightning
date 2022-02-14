@@ -1,5 +1,5 @@
-#include "cpu_kernels/GateImplementationsPI.hpp"
 #include "TestHelpers.hpp"
+#include "cpu_kernels/GateImplementationsPI.hpp"
 
 #include <catch2/catch.hpp>
 
@@ -96,8 +96,7 @@ TEMPLATE_TEST_CASE("randomUnitary", "[Test_Internal]", float, double) {
         const size_t dim = (1U << num_qubits);
         const auto unitary = randomUnitary<PrecisionT>(re, num_qubits);
 
-        std::vector<std::complex<PrecisionT>> unitary_dagger =
-            Util::Transpose(unitary, dim, dim);
+        auto unitary_dagger = Util::Transpose(unitary, dim, dim);
         std::transform(
             unitary_dagger.begin(), unitary_dagger.end(),
             unitary_dagger.begin(),

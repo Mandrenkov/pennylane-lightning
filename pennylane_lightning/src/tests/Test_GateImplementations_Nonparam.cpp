@@ -71,13 +71,18 @@ using std::vector;
 template <typename PrecisionT, class GateImplementation>
 void testApplyPauliX() {
     const size_t num_qubits = 3;
-    for (size_t index = 0; index < num_qubits; index++) {
-        auto st = createZeroState<PrecisionT>(num_qubits);
-        CHECK(st[0] == Util::ONE<PrecisionT>());
+    DYNAMIC_SECTION(GateImplementation::name
+                    << ", PauliX - " << PrecisionToName<PrecisionT>::value) {
+        for (size_t index = 0; index < num_qubits; index++) {
+            auto st = createZeroState<PrecisionT>(num_qubits);
+            CHECK(st[0] == Util::ONE<PrecisionT>());
 
-        GateImplementation::applyPauliX(st.data(), num_qubits, {index}, false);
-        CHECK(st[0] == Util::ZERO<PrecisionT>());
-        CHECK(st[0b1 << (num_qubits - index - 1)] == Util::ONE<PrecisionT>());
+            GateImplementation::applyPauliX(st.data(), num_qubits, {index},
+                                            false);
+            CHECK(st[0] == Util::ZERO<PrecisionT>());
+            CHECK(st[0b1 << (num_qubits - index - 1)] ==
+                  Util::ONE<PrecisionT>());
+        }
     }
 }
 PENNYLANE_RUN_TEST(PauliX);
@@ -341,7 +346,7 @@ template <typename PrecisionT, class GateImplementation> void testApplyCZ() {
     DYNAMIC_SECTION(GateImplementation::name
                     << ", CZ0,2 |+10> -> |+10> - "
                     << PrecisionToName<PrecisionT>::value) {
-        const std::vector<ComplexPrecisionT> &expected{ini_st};
+        const auto &expected = ini_st;
 
         auto sv02 = ini_st;
         auto sv20 = ini_st;
@@ -355,7 +360,7 @@ template <typename PrecisionT, class GateImplementation> void testApplyCZ() {
     DYNAMIC_SECTION(GateImplementation::name
                     << ", CZ1,2 |+10> -> |+10> - "
                     << PrecisionToName<PrecisionT>::value) {
-        const std::vector<ComplexPrecisionT> &expected{ini_st};
+        const auto &expected = ini_st;
 
         auto sv12 = ini_st;
         auto sv21 = ini_st;
