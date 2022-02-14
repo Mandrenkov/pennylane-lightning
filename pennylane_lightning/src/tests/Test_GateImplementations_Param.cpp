@@ -652,7 +652,7 @@ void testApplyIsingZZ() {
                     << PrecisionToName<PrecisionT>::value) {
         const size_t num_qubits = 4;
 
-        std::vector<ComplexPrecisionT> ini_st{
+        TestVector<ComplexPrecisionT> ini_st{
             ComplexPrecisionT{0.267462841882, 0.010768564798},
             ComplexPrecisionT{0.228575129706, 0.010564590956},
             ComplexPrecisionT{0.099492749900, 0.260849823392},
