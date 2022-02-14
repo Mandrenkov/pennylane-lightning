@@ -77,7 +77,6 @@ auto permuteInternal(AVX512IntrinsicType<PrecisionT> v)
     }
 }
 
-
 constexpr uint8_t parity(size_t n, size_t rev_wire) {
     return static_cast<uint8_t>((n >> rev_wire) & 1U);
 }
@@ -86,65 +85,80 @@ constexpr uint8_t parity(size_t n, size_t rev_wire0, size_t rev_wire1) {
            static_cast<uint8_t>((n >> rev_wire1) & 1U);
 }
 
-
 inline __m512 parityS(size_t n, size_t rev_wire) {
-    const auto indices = _mm512_setr_epi64(n+0, n+1, n+2, n+3,
-                                           n+4, n+5, n+6, n+7);
-    const auto ones = _mm512_set1_epi64(1U);
-    auto parities = _mm512_srli_epi64(indices, rev_wire);
-    parities = _mm512_and_epi64(parities, ones); // as the upper parts must be 0, we consider it as 32x16
-    parities = _mm512_shuffle_epi32(parities, static_cast<_MM_PERM_ENUM>(0B10100000));
-
-    parities = _mm512_sub_epi32(_mm512_set1_epi32(1U), _mm512_slli_epi32(parities, 1));
-    return _mm512_cvtepi32_ps(parities);
+    return _mm512_setr_ps(parity(n + 0, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 0, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 1, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 1, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 2, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 2, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 3, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 3, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 4, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 4, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 5, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 5, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 6, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 6, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 7, rev_wire) ? -1.0F : 1.0F,
+                          parity(n + 7, rev_wire) ? -1.0F : 1.0F);
 }
 inline __m512 parityS(size_t n, size_t rev_wire0, size_t rev_wire1) {
-    return _mm512_setr_ps(
-        parity(n+0, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+0, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+1, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+1, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+2, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+2, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+3, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+3, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+4, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+4, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+5, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+5, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+6, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+6, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+7, rev_wire0, rev_wire1) ? -1.0F:1.0F,
-        parity(n+7, rev_wire0, rev_wire1) ? -1.0F:1.0F
-    );
+    return _mm512_setr_ps(parity(n + 0, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 0, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 4, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 4, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 5, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 5, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 6, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 6, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 7, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
+                          parity(n + 7, rev_wire0, rev_wire1) ? -1.0F : 1.0F);
 }
 
 inline __m512d parityD(size_t n, size_t rev_wire) {
-    const auto indices = _mm512_setr_epi64(n+0, n+0, n+1, n+1, n+2, n+2, n+3, n+3);
+    return _mm512_setr_pd(parity(n + 0, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 0, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire) ? -1.0L : 1.0L);
+}
+
+inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
+
+    const auto indices = _mm512_setr_epi64(n + 0, n + 0, n + 1, n + 1, n + 2,
+                                           n + 2, n + 3, n + 3);
     const auto ones = _mm512_set1_epi64(1U);
-    auto parities = _mm512_srli_epi64(indices, rev_wire);
+    auto parities = _mm512_xor_epi64(_mm512_srli_epi64(indices, rev_wire0),
+                                     _mm512_srli_epi64(indices, rev_wire1));
     parities = _mm512_and_epi64(parities, ones);
     if constexpr (use_avx512dq) {
-        parities = _mm512_sub_epi64(_mm512_set1_epi64(1U), _mm512_slli_epi64(parities, 1));
+        parities = _mm512_sub_epi64(_mm512_set1_epi64(1U),
+                                    _mm512_slli_epi64(parities, 1));
         return _mm512_cvtepi64_pd(parities);
     }
 
     __m256i parities_32 = _mm512_cvtepi64_epi32(parities);
-    parities_32 = _mm256_sub_epi32(_mm256_set1_epi32(1U), _mm256_slli_epi32(parities_32, 1));
+    parities_32 = _mm256_sub_epi32(_mm256_set1_epi32(1U),
+                                   _mm256_slli_epi32(parities_32, 1));
     return _mm512_cvtepi32_pd(parities_32);
-}
-
-inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
-    return _mm512_setr_pd(
-        parity(n+0, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+0, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+1, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+1, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+2, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+2, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+3, rev_wire0, rev_wire1) ? -1.0L:1.0L,
-        parity(n+3, rev_wire0, rev_wire1) ? -1.0L:1.0L
-    );
+    return _mm512_setr_pd(parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L);
 }
 
 /**
@@ -154,40 +168,21 @@ inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
  */
 inline __m512d productImagD(__m512d val, __m512d imag_val) {
     alignas(64) constexpr static double imag_factor[8] = {
-        -1.0l,
-        1.0l,
-        -1.0l,
-        1.0l,
-        -1.0l,
-        1.0l,
-        -1.0l,
-        1.0l,
+        -1.0l, 1.0l, -1.0l, 1.0l, -1.0l, 1.0l, -1.0l, 1.0l,
     };
-    __m512d prod_shuffled = _mm512_permutex_pd(_mm512_mul_pd(val, imag_val), 0B10110001);
+    __m512d prod_shuffled =
+        _mm512_permutex_pd(_mm512_mul_pd(val, imag_val), 0B10110001);
     return _mm512_mul_pd(prod_shuffled, _mm512_load_pd(&imag_factor));
 }
 
 inline __m512 productImagS(__m512 val, __m512 imag_val) {
     alignas(64) constexpr static float imag_factor[16] = {
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
-        -1.0f,
-        1.0f,
+        -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f,
+        -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f,
 
     };
-    __m512 prod_shuffled = _mm512_permute_ps(_mm512_mul_ps(val, imag_val), 0B10110001);
+    __m512 prod_shuffled =
+        _mm512_permute_ps(_mm512_mul_ps(val, imag_val), 0B10110001);
     return _mm512_mul_ps(prod_shuffled, _mm512_load_ps(&imag_factor));
 }
 } // namespace Internal
@@ -204,7 +199,9 @@ class GateImplementationsAVX512 {
     constexpr static uint32_t data_alignment_in_bytes = 64;
 
     constexpr static std::array implemented_gates = {
-        GateOperation::PauliX, GateOperation::RZ
+        GateOperation::PauliX,
+        GateOperation::RZ,
+        GateOperation::IsingZZ,
     };
 
     constexpr static std::array<GeneratorOperation, 0> implemented_generators =
@@ -325,133 +322,134 @@ class GateImplementationsAVX512 {
     }
     /* Version iterate over all indices */
     template <class PrecisionT, class ParamT = PrecisionT>
-    static void applyRZ(std::complex<PrecisionT> *arr,
-                        const size_t num_qubits,
+    static void applyRZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
                         const std::vector<size_t> &wires,
-                        [[maybe_unused]] bool inverse,
-                        ParamT angle) {
+                        [[maybe_unused]] bool inverse, ParamT angle) {
         assert(wires.size() == 1);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
             if (num_qubits < 3) {
-                GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse, angle);
-            }
-            else {
+                GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
+                                               angle);
+            } else {
                 const size_t rev_wire = num_qubits - wires[0] - 1;
 
-                __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle/2));
-                const float isin = inverse?std::sin(angle/2):-std::sin(angle/2);
+                __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
+                const float isin =
+                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512 imag_sin_factor = _mm512_set_ps(
-                    -isin, isin, -isin, isin, 
-                    -isin, isin, -isin, isin,
-                    -isin, isin, -isin, isin,
-                    -isin, isin, -isin, isin
-                );
-                for(size_t n = 0; n < (1U << num_qubits); n += 8) {
+                    -isin, isin, -isin, isin, -isin, isin, -isin, isin, -isin,
+                    isin, -isin, isin, -isin, isin, -isin, isin);
+                for (size_t n = 0; n < (1U << num_qubits); n += 8) {
                     __m512 coeffs = _mm512_load_ps(arr + n);
                     __m512 prod_cos = _mm512_mul_ps(real_cos_factor, coeffs);
-                    
-                    __m512 imag_sin_parity = _mm512_mul_ps(imag_sin_factor, 
-                            Internal::parityS(n, rev_wire));
+
+                    __m512 imag_sin_parity = _mm512_mul_ps(
+                        imag_sin_factor, Internal::parityS(n, rev_wire));
                     __m512 prod_sin = _mm512_mul_ps(coeffs, imag_sin_parity);
 
-                    __m512 prod = _mm512_add_ps(prod_cos, 
-                            _mm512_permute_ps(prod_sin, 0B10110001));
+                    __m512 prod = _mm512_add_ps(
+                        prod_cos, _mm512_permute_ps(prod_sin, 0B10110001));
                     _mm512_store_ps(arr + n, prod);
                 }
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
-                GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse, angle);
-            }
-            else {
+                GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
+                                               angle);
+            } else {
                 const size_t rev_wire = num_qubits - wires[0] - 1;
-                __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle/2));
+                __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
-                const double isin = inverse?std::sin(angle/2):-std::sin(angle/2);
+                const double isin =
+                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512d imag_sin_factor = _mm512_set_pd(
-                    -isin, isin, -isin, isin, 
-                    -isin, isin, -isin, isin
-                );
-                for(size_t n = 0; n < (1U << num_qubits); n += 4) {
+                    -isin, isin, -isin, isin, -isin, isin, -isin, isin);
+                for (size_t n = 0; n < (1U << num_qubits); n += 4) {
                     __m512d coeffs = _mm512_load_pd(arr + n);
                     __m512d prod_cos = _mm512_mul_pd(real_cos_factor, coeffs);
-                    
-                    __m512d imag_sin_parity = _mm512_mul_pd(imag_sin_factor, Internal::parityD(n, rev_wire));
+
+                    __m512d imag_sin_parity = _mm512_mul_pd(
+                        imag_sin_factor, Internal::parityD(n, rev_wire));
                     __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
 
-                    __m512d prod = _mm512_add_pd(prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
+                    __m512d prod = _mm512_add_pd(
+                        prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
                     _mm512_store_pd(arr + n, prod);
                 }
             }
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> 
-                    || std::is_same_v<PrecisionT, double>, "Only float or double is supported.");
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                              std::is_same_v<PrecisionT, double>,
+                          "Only float or double is supported.");
         }
     }
     /* Version iterate over all indices */
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyIsingZZ(std::complex<PrecisionT> *arr,
-                        const size_t num_qubits,
-                        const std::vector<size_t> &wires,
-                        [[maybe_unused]] bool inverse,
-                        ParamT angle) {
+                             const size_t num_qubits,
+                             const std::vector<size_t> &wires,
+                             [[maybe_unused]] bool inverse, ParamT angle) {
         assert(wires.size() == 2);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
             if (num_qubits < 3) {
-                GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires, inverse, angle);
-            }
-            else {
+                GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
+                                                    inverse, angle);
+            } else {
                 const size_t rev_wire0 = num_qubits - wires[0] - 1;
                 const size_t rev_wire1 = num_qubits - wires[1] - 1;
-                __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle/2));
-                const float isin = inverse?std::sin(angle/2):-std::sin(angle/2);
+                __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
+                const float isin =
+                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512 imag_sin_factor = _mm512_set_ps(
-                    -isin, isin, -isin, isin, 
-                    -isin, isin, -isin, isin,
-                    -isin, isin, -isin, isin,
-                    -isin, isin, -isin, isin
-                );
-                for(size_t n = 0; n < (1U << num_qubits); n += 8) {
+                    -isin, isin, -isin, isin, -isin, isin, -isin, isin, -isin,
+                    isin, -isin, isin, -isin, isin, -isin, isin);
+                for (size_t n = 0; n < (1U << num_qubits); n += 8) {
                     __m512 coeffs = _mm512_load_ps(arr + n);
                     __m512 prod_cos = _mm512_mul_ps(real_cos_factor, coeffs);
-                    
-                    __m512 imag_sin_parity = _mm512_mul_ps(imag_sin_factor, Internal::parityS(n, rev_wire0, rev_wire1));
+
+                    __m512 imag_sin_parity = _mm512_mul_ps(
+                        imag_sin_factor,
+                        Internal::parityS(n, rev_wire0, rev_wire1));
                     __m512 prod_sin = _mm512_mul_ps(coeffs, imag_sin_parity);
 
-                    __m512 prod = _mm512_add_ps(prod_cos, _mm512_permute_ps(prod_sin, 0B10110001));
+                    __m512 prod = _mm512_add_ps(
+                        prod_cos, _mm512_permute_ps(prod_sin, 0B10110001));
                     _mm512_store_ps(arr + n, prod);
                 }
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
-                GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires, inverse, angle);
-            }
-            else {
+                GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
+                                                    inverse, angle);
+            } else {
                 const size_t rev_wire0 = num_qubits - wires[0] - 1;
                 const size_t rev_wire1 = num_qubits - wires[1] - 1;
-                __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle/2));
+                __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
-                const double isin = inverse?std::sin(angle/2):-std::sin(angle/2);
+                const double isin =
+                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512d imag_sin_factor = _mm512_set_pd(
-                    -isin, isin, -isin, isin, 
-                    -isin, isin, -isin, isin
-                );
-                for(size_t n = 0; n < (1U << num_qubits); n += 4) {
+                    -isin, isin, -isin, isin, -isin, isin, -isin, isin);
+                for (size_t n = 0; n < (1U << num_qubits); n += 4) {
                     __m512d coeffs = _mm512_load_pd(arr + n);
                     __m512d prod_cos = _mm512_mul_pd(real_cos_factor, coeffs);
-                    
-                    __m512d imag_sin_parity = _mm512_mul_pd(imag_sin_factor, Internal::parityD(n, rev_wire0, rev_wire1));
+
+                    __m512d imag_sin_parity = _mm512_mul_pd(
+                        imag_sin_factor,
+                        Internal::parityD(n, rev_wire0, rev_wire1));
                     __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
 
-                    __m512d prod = _mm512_add_pd(prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
+                    __m512d prod = _mm512_add_pd(
+                        prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
                     _mm512_store_pd(arr + n, prod);
                 }
             }
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> 
-                    || std::is_same_v<PrecisionT, double>, "Only float or double is supported.");
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                              std::is_same_v<PrecisionT, double>,
+                          "Only float or double is supported.");
         }
     }
 };
