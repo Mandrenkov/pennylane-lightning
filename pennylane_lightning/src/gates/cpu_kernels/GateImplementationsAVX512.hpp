@@ -44,39 +44,6 @@ template <> struct AVX512Intrinsic<double> { using Type = __m512d; };
 template <class PrecisionT>
 using AVX512IntrinsicType = typename AVX512Intrinsic<PrecisionT>::Type;
 
-template <class PrecisionT, size_t rev_wire>
-auto permuteInternal(AVX512IntrinsicType<PrecisionT> v)
-    -> AVX512IntrinsicType<PrecisionT> {
-    // Permute internal data of v after grouping two(complex number)
-    if constexpr (std::is_same_v<PrecisionT, float>) {
-        if constexpr (rev_wire == 0) {
-            return _mm512_permute_ps(v, 0B01001110);
-        }
-        if constexpr (rev_wire == 1) {
-            const static auto shuffle_idx = _mm512_set_epi32(
-                11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0, 7, 6, 5, 4);
-            return _mm512_permutexvar_ps(shuffle_idx, v);
-        }
-        if constexpr (rev_wire == 2) {
-            const static auto shuffle_idx = _mm512_set_epi32(
-                7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
-            return _mm512_permutexvar_ps(shuffle_idx, v);
-        }
-    }
-    if constexpr (std::is_same_v<PrecisionT, double>) {
-        if constexpr (rev_wire == 0) {
-            const static auto shuffle_idx =
-                _mm512_set_epi64(5, 4, 7, 6, 1, 0, 3, 2);
-            return _mm512_permutexvar_pd(shuffle_idx, v);
-        }
-        if constexpr (rev_wire == 1) {
-            const static auto shuffle_idx =
-                _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4);
-            return _mm512_permutexvar_pd(shuffle_idx, v);
-        }
-    }
-}
-
 constexpr uint8_t parity(size_t n, size_t rev_wire) {
     return static_cast<uint8_t>((n >> rev_wire) & 1U);
 }
@@ -151,30 +118,79 @@ inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1,
     return _mm512_mask_mov_pd(_mm512_set1_pd(-1.0), mask, _mm512_set1_pd(1.0));
 }
 
+template<typename T>
+struct ImagFactor {
+    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>, 
+            "T must be float or double.");
+};
+
+template <>
+struct ImagFactor<float> {
+    // NOLINTNEXTLINE(hicpp-avoid-c-arrays)
+    alignas(64) constexpr static float value[16] = {
+        -1.0F, 1.0F, -1.0F, 1.0F, -1.0F, 1.0F, -1.0F, 1.0F,
+        -1.0F, 1.0F, -1.0F, 1.0F, -1.0F, 1.0F, -1.0F, 1.0F,
+    };
+};
+
+template <>
+struct ImagFactor<double> {
+    // NOLINTNEXTLINE(hicpp-avoid-c-arrays)
+    alignas(64) constexpr static double value[8] = {
+        -1.0L, 1.0L, -1.0L, 1.0L, -1.0L, 1.0L, -1.0L, 1.0L,
+    };
+};
+
 /**
- * @brief
+ * @brief Calculate val * 1j * factor
  *
- * @val is just a sequence of values for a complex value
+ * @param val Complex values arranged in [i7, r7, ..., i0, r0] where
+ * each complex values are r0 + 1j*i0, ... 
+ * @param imag_val Value to product. We product 1j*imag_val to val.
  */
-inline __m512d productImagD(__m512d val, __m512d imag_val) {
-    alignas(64) constexpr static double imag_factor[8] = {
-        -1.0l, 1.0l, -1.0l, 1.0l, -1.0l, 1.0l, -1.0l, 1.0l,
-    };
-    __m512d prod_shuffled =
-        _mm512_permutex_pd(_mm512_mul_pd(val, imag_val), 0B10110001);
-    return _mm512_mul_pd(prod_shuffled, _mm512_load_pd(&imag_factor));
-}
-
-inline __m512 productImagS(__m512 val, __m512 imag_val) {
-    alignas(64) constexpr static float imag_factor[16] = {
-        -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f,
-        -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f,
-
-    };
+inline __m512 productImagS(__m512 val, __m512 factor) {
     __m512 prod_shuffled =
-        _mm512_permute_ps(_mm512_mul_ps(val, imag_val), 0B10110001);
-    return _mm512_mul_ps(prod_shuffled, _mm512_load_ps(&imag_factor));
+        _mm512_permute_ps(_mm512_mul_ps(val, factor), 0B10110001);
+    return _mm512_mul_ps(prod_shuffled, _mm512_load_ps(&ImagFactor<float>::value));
 }
+
+/**
+ * @brief Calculate val * 1j
+ *
+ * @param val Complex values arranged in [i7, r7, ..., i0, r0] where
+ * each complex values are r0 + 1j*i0, ... 
+ */
+inline __m512 productImagS(__m512 val) {
+    __m512 prod_shuffled = _mm512_permute_ps(val, 0B10110001);
+    return _mm512_mul_ps(prod_shuffled, _mm512_load_ps(&ImagFactor<float>::value));
+}
+
+/**
+ * @brief Calculate val * 1j * factor 
+ *
+ * @param val Complex values arranged in [i3, r3, ..., i0, r0] where
+ * each complex values are r0 + 1j*i0, ... 
+ * @param imag_val Value to product. We product 1j*imag_val to val.
+ */
+inline __m512d productImagD(__m512d val, __m512d factor) {
+    __m512d prod_shuffled =
+        _mm512_permutex_pd(_mm512_mul_pd(val, factor), 0B10110001);
+    return _mm512_mul_pd(prod_shuffled, _mm512_load_pd(&ImagFactor<double>::value));
+}
+
+/**
+ * @brief Calculate val * 1j
+ *
+ * @param val Complex values arranged in [i3, r3, ..., i0, r0] where
+ * each complex values are r0 + 1j*i0, ... 
+ * @param imag_val Value to product. We product 1j*imag_val to val.
+ */
+inline __m512d productImagD(__m512d val) {
+    __m512d prod_shuffled =_mm512_permutex_pd(val, 0B10110001);
+    return _mm512_mul_pd(prod_shuffled, _mm512_load_pd(&ImagFactor<double>::value));
+}
+
+
 } // namespace Internal
 
 class GateImplementationsAVX512 {
@@ -199,19 +215,33 @@ class GateImplementationsAVX512 {
 
   private:
     template <size_t rev_wire>
-    static void applyPauliX_float_internal(std::complex<float> *arr,
+    inline static void applyPauliXFloatInternalOp(__m512& v) {
+        if constexpr (rev_wire == 0) {
+            v = _mm512_permute_ps(v, 0B01001110);
+        } else if (rev_wire == 1) {
+            const auto shuffle_idx = _mm512_set_epi32(
+                11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0, 7, 6, 5, 4);
+            v = _mm512_permutexvar_ps(shuffle_idx, v);
+        } else if (rev_wire == 2) {
+            const auto shuffle_idx = _mm512_set_epi32(
+                7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
+            v = _mm512_permutexvar_ps(shuffle_idx, v);
+        }
+    }
+    template <size_t rev_wire>
+    static void applyPauliXFloatInternal(std::complex<float> *arr,
                                            const size_t num_qubits) {
         constexpr static auto step =
             data_alignment_in_bytes / sizeof(float) / 2;
         for (size_t k = 0; k < (1U << num_qubits); k += step) {
-            const __m512 v = _mm512_load_ps(arr + k);
-            _mm512_store_ps(arr + k,
-                            Internal::permuteInternal<float, rev_wire>(v));
+            __m512 v = _mm512_load_ps(arr + k);
+            applyPauliXFloatInternalOp<rev_wire>(v);
+            _mm512_store_ps(arr + k, v);
         }
     }
-    static void applyPauliX_float_external(std::complex<float> *arr,
-                                           const size_t num_qubits,
-                                           const size_t rev_wire) {
+    static void applyPauliXFloatExternal(std::complex<float> *arr,
+                                         const size_t num_qubits,
+                                         const size_t rev_wire) {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
@@ -229,19 +259,32 @@ class GateImplementationsAVX512 {
     }
 
     template <size_t rev_wire>
-    static void applyPauliX_double_internal(std::complex<double> *arr,
-                                            const size_t num_qubits) {
+    inline static void applyPauliXDoubleInternalOp(__m512d& v) {
+        if constexpr (rev_wire == 0) {
+            const auto shuffle_idx =
+                _mm512_set_epi64(5, 4, 7, 6, 1, 0, 3, 2);
+            v = _mm512_permutexvar_pd(shuffle_idx, v);
+        } else if (rev_wire == 1) {
+            const auto shuffle_idx =
+                _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4);
+            v = _mm512_permutexvar_pd(shuffle_idx, v);
+        }
+    }
+
+    template <size_t rev_wire>
+    static void applyPauliXDoubleInternal(std::complex<double> *arr,
+                                          const size_t num_qubits) {
         constexpr static auto step =
             data_alignment_in_bytes / sizeof(double) / 2;
         for (size_t k = 0; k < (1U << num_qubits); k += step) {
-            const __m512d v = _mm512_load_pd(arr + k);
-            _mm512_store_pd(arr + k,
-                            Internal::permuteInternal<double, rev_wire>(v));
+            __m512d v = _mm512_load_pd(arr + k);
+            applyPauliXDoubleInternalOp<rev_wire>(v);
+            _mm512_store_pd(arr + k, v);
         }
     }
-    static void applyPauliX_double_external(std::complex<double> *arr,
-                                            const size_t num_qubits,
-                                            const size_t rev_wire) {
+    static void applyPauliXDoubleExternal(std::complex<double> *arr,
+                                          const size_t num_qubits,
+                                          const size_t rev_wire) {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
@@ -255,6 +298,124 @@ class GateImplementationsAVX512 {
             const __m512d v1 = _mm512_load_pd(arr + i1);
             _mm512_store_pd(arr + i0, v1);
             _mm512_store_pd(arr + i1, v0);
+        }
+    }
+
+    template <size_t rev_wire>
+    static void applyPauliYFloatInternalOp(__m512& v) {
+        if constexpr (rev_wire == 0) {
+            const auto factor = _mm512_setr_ps(
+                    1.0F, -1.0F, -1.0F, 1.0F,
+                    1.0F, -1.0F, -1.0F, 1.0F,
+                    1.0F, -1.0F, -1.0F, 1.0F,
+                    1.0F, -1.0F, -1.0F, 1.0F);
+            v = _mm512_permute_ps(v, 0B00011011);
+            v = _mm512_mul_ps(v, factor);
+        } else if (rev_wire == 1) {
+            const auto factor = _mm512_setr_ps(
+                    1.0F, -1.0F, 1.0F, -1.0F,
+                    -1.0F, 1.0F, -1.0F, 1.0F,
+                    1.0F, -1.0F, 1.0F, -1.0F,
+                    -1.0F, 1.0F, -1.0F, 1.0F);
+            const auto shuffle_idx = _mm512_set_epi32(
+                10, 11, 8, 9, 14, 15, 12, 13, 2, 3, 0, 1, 6, 7, 4, 5);
+            v = _mm512_permutexvar_ps(shuffle_idx, v);
+            v = _mm512_mul_ps(v, factor);
+        } else if (rev_wire == 2) {
+            const auto factor = _mm512_setr_ps(
+                    1.0F, -1.0F, 1.0F, -1.0F,
+                    1.0F, -1.0F, 1.0F, -1.0F,
+                    -1.0F, 1.0F, -1.0F, 1.0F,
+                    -1.0F, 1.0F, -1.0F, 1.0F);
+            const auto shuffle_idx = _mm512_set_epi32(
+                6, 7, 4, 5, 2, 3, 0, 1, 14, 15, 12, 13, 10, 11, 8, 9);
+            v = _mm512_permutexvar_ps(shuffle_idx, v);
+            v = _mm512_mul_ps(v, factor);
+        }
+    }
+
+    template <size_t rev_wire>
+    static void applyPauliYFloatInternal(std::complex<float> *arr,
+                                         const size_t num_qubits) {
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(float) / 2;
+        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+            __m512 v = _mm512_load_ps(arr + k);
+            applyPauliYFloatInternalOp<rev_wire>(v);
+            _mm512_store_ps(arr + k, v);
+        }
+    }
+    static void applyPauliYFloatExternal(std::complex<float> *arr,
+                                           const size_t num_qubits,
+                                           const size_t rev_wire) {
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(float) / 2;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            const __m512 v0 = _mm512_load_ps(arr + i0);
+            const __m512 v1 = _mm512_load_ps(arr + i1);
+            _mm512_store_ps(arr + i0, Internal::productImagS(v1, _mm512_set1_ps(-1.0F)));
+            _mm512_store_ps(arr + i1, Internal::productImagS(v0));
+        }
+    }
+
+    template <size_t rev_wire>
+    inline static void applyPauliYDoubleInternalOp(__m512d& v) {
+        if constexpr (rev_wire == 0) {
+            const auto factor = _mm512_setr_pd(
+                1.0L, -1.0L, -1.0L, 1.0L,
+                1.0L, -1.0L, -1.0L, 1.0L
+            );
+            v = _mm512_mul_pd(v, factor);
+            const auto shuffle_idx =
+                _mm512_set_epi64(4, 5, 6, 7, 0, 1, 2, 3);
+            v = _mm512_permutexvar_pd(shuffle_idx, v);
+        } else if (rev_wire == 1) {
+            const auto factor = _mm512_setr_pd(
+                1.0L, -1.0L, 1.0L, -1.0L,
+                -1.0L, 1.0L, -1.0L, 1.0L
+            );
+            const auto shuffle_idx =
+                _mm512_set_epi64(2, 3, 0, 1, 6, 7, 4, 5);
+            v = _mm512_permutexvar_pd(shuffle_idx, v);
+            v = _mm512_mul_pd(v, factor);
+        }
+    }
+
+    template <size_t rev_wire>
+    static void applyPauliYDoubleInternal(std::complex<double> *arr,
+                                            const size_t num_qubits) {
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(double) / 2;
+        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+            __m512d v = _mm512_load_pd(arr + k);
+            applyPauliYDoubleInternalOp<rev_wire>(v);
+            _mm512_store_pd(arr + k, v);
+        }
+    }
+
+    static void applyPauliYDoubleExternal(std::complex<double> *arr,
+                                          const size_t num_qubits,
+                                          const size_t rev_wire) {
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(double) / 2;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            const __m512d v0 = _mm512_load_pd(arr + i0);
+            const __m512d v1 = _mm512_load_pd(arr + i1);
+
+            _mm512_store_pd(arr + i0, Internal::productImagD(v1, _mm512_set1_pd(-1.0L)));
+            _mm512_store_pd(arr + i1, Internal::productImagD(v0));
         }
     }
 
@@ -274,16 +435,16 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                applyPauliX_float_internal<0>(arr, num_qubits);
+                applyPauliXFloatInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                applyPauliX_float_internal<1>(arr, num_qubits);
+                applyPauliXFloatInternal<1>(arr, num_qubits);
                 return;
             case 2:
-                applyPauliX_float_internal<2>(arr, num_qubits);
+                applyPauliXFloatInternal<2>(arr, num_qubits);
                 return;
             default:
-                applyPauliX_float_external(arr, num_qubits, rev_wire);
+                applyPauliXFloatExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -296,13 +457,65 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                applyPauliX_double_internal<0>(arr, num_qubits);
+                applyPauliXDoubleInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                applyPauliX_double_internal<1>(arr, num_qubits);
+                applyPauliXDoubleInternal<1>(arr, num_qubits);
                 return;
             default:
-                applyPauliX_double_external(arr, num_qubits, rev_wire);
+                applyPauliXDoubleExternal(arr, num_qubits, rev_wire);
+                return;
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    template <class PrecisionT>
+    static void applyPauliY(std::complex<PrecisionT> *arr,
+                            const size_t num_qubits,
+                            const std::vector<size_t> &wires,
+                            [[maybe_unused]] bool inverse) {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            if (num_qubits < 3) {
+                GateImplementationsLM::applyPauliY(arr, num_qubits, wires,
+                                                   inverse);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                applyPauliYFloatInternal<0>(arr, num_qubits);
+                return;
+            case 1:
+                applyPauliYFloatInternal<1>(arr, num_qubits);
+                return;
+            case 2:
+                applyPauliYFloatInternal<2>(arr, num_qubits);
+                return;
+            default:
+                applyPauliYFloatExternal(arr, num_qubits, rev_wire);
+                return;
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            if (num_qubits < 2) {
+                GateImplementationsLM::applyPauliY(arr, num_qubits, wires,
+                                                   inverse);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                applyPauliYDoubleInternal<0>(arr, num_qubits);
+                return;
+            case 1:
+                applyPauliYDoubleInternal<1>(arr, num_qubits);
+                return;
+            default:
+                applyPauliYDoubleExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else {

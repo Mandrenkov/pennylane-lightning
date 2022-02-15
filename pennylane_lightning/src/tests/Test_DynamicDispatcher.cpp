@@ -40,7 +40,7 @@ struct testDispatchForKernel {
         const auto ini_st = createRandomState<PrecisionT>(re, num_qubits);
         auto expected = ini_st;
 
-        const auto wires = createWires(gate_op);
+        const auto wires = createWires(gate_op, num_qubits);
         const auto params = createParams<PrecisionT>(gate_op);
 
         // We first calculate expected directly calling a static member function

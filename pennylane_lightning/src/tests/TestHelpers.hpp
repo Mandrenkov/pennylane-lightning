@@ -285,11 +285,13 @@ auto createProductState(std::string_view str)
     return st;
 }
 
-inline auto createWires(Gates::GateOperation op) -> std::vector<size_t> {
+inline auto createWires(Gates::GateOperation op, size_t num_qubits)
+    -> std::vector<size_t> {
     if (Pennylane::Util::array_has_elt(Gates::Constant::multi_qubit_gates,
                                        op)) {
-        // if multi-qubit gates
-        return {0, 1, 2};
+        std::vector<size_t> wires(num_qubits);
+        std::iota(wires.begin(), wires.end(), 0);
+        return wires;
     }
     switch (Pennylane::Util::lookup(Gates::Constant::gate_wires, op)) {
     case 1:
@@ -363,7 +365,7 @@ auto randomUnitary(RandomEngine &re, size_t num_qubits)
         ComplexPrecisionT *row_p = res.data() + row * dim;
         PrecisionT norm2 = std::sqrt(squaredNorm(row_p, dim));
 
-        // noramlize row2
+        // normalize row2
         std::transform(row_p, row_p + dim, row_p, [norm2](const auto c) {
             return (static_cast<PrecisionT>(1.0) / norm2) * c;
         });
