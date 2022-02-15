@@ -151,14 +151,6 @@ inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
     parities_32 = _mm256_sub_epi32(_mm256_set1_epi32(1U),
                                    _mm256_slli_epi32(parities_32, 1));
     return _mm512_cvtepi32_pd(parities_32);
-    return _mm512_setr_pd(parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
-                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L);
 }
 
 /**

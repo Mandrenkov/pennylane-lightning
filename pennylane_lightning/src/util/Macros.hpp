@@ -37,6 +37,13 @@
 [[maybe_unused]] static constexpr bool use_avx512dq = false;
 #endif
 
+#if defined(__AVX512VL__)
+#define PL_USE_AVX512VL 1
+[[maybe_unused]] static constexpr bool use_avx512vl = true;
+#else
+[[maybe_unused]] static constexpr bool use_avx512vl = false;
+#endif
+
 #if defined(_OPENMP)
 #define PL_USE_OMP 1
 [[maybe_unused]] static constexpr bool use_openmp = true;
