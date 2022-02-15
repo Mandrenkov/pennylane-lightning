@@ -133,24 +133,22 @@ inline __m512d parityD(size_t n, size_t rev_wire) {
                           parity(n + 3, rev_wire) ? -1.0L : 1.0L);
 }
 
-inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
-
-    const auto indices = _mm512_setr_epi64(n + 0, n + 0, n + 1, n + 1, n + 2,
-                                           n + 2, n + 3, n + 3);
-    const auto ones = _mm512_set1_epi64(1U);
+inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1, 
+        const __m512i ones_epi64) {
+    const auto indices = _mm512_setr_epi64(n+0, n+0, n+1, n+1, n+2, n+2, n+3, n+3);
     auto parities = _mm512_xor_epi64(_mm512_srli_epi64(indices, rev_wire0),
                                      _mm512_srli_epi64(indices, rev_wire1));
-    parities = _mm512_and_epi64(parities, ones);
+    parities = _mm512_and_epi64(parities, ones_epi64);
+
     if constexpr (use_avx512dq) {
-        parities = _mm512_sub_epi64(_mm512_set1_epi64(1U),
+        parities = _mm512_sub_epi64(ones_epi64,
                                     _mm512_slli_epi64(parities, 1));
         return _mm512_cvtepi64_pd(parities);
     }
-
-    __m256i parities_32 = _mm512_cvtepi64_epi32(parities);
-    parities_32 = _mm256_sub_epi32(_mm256_set1_epi32(1U),
-                                   _mm256_slli_epi32(parities_32, 1));
-    return _mm512_cvtepi32_pd(parities_32);
+    const auto mask = _mm512_cmp_epi64_mask(parities,
+                                            ones_epi64,
+                                            _MM_CMPINT_NE);
+    return _mm512_mask_mov_pd(_mm512_set1_pd(-1.0), mask, _mm512_set1_pd(1.0));
 }
 
 /**
@@ -420,6 +418,8 @@ class GateImplementationsAVX512 {
                 const size_t rev_wire1 = num_qubits - wires[1] - 1;
                 __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
+                const auto ones = _mm512_set1_epi64(1U);
+
                 const double isin =
                     inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512d imag_sin_factor = _mm512_set_pd(
@@ -430,7 +430,7 @@ class GateImplementationsAVX512 {
 
                     __m512d imag_sin_parity = _mm512_mul_pd(
                         imag_sin_factor,
-                        Internal::parityD(n, rev_wire0, rev_wire1));
+                        Internal::parityD(n, rev_wire0, rev_wire1, ones));
                     __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
 
                     __m512d prod = _mm512_add_pd(
