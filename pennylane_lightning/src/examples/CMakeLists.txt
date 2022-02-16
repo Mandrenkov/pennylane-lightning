@@ -24,6 +24,10 @@ target_link_libraries(lightning_examples INTERFACE lightning_compile_options
 add_executable(benchmark_operation benchmark_operation.cpp)
 target_link_libraries(benchmark_operation PRIVATE lightning_examples)
 
+add_executable(benchmark_operation_float benchmark_operation.cpp)
+target_compile_options(benchmark_operation_float PRIVATE "-DUSE_SINGLE_PRECISION")
+target_link_libraries(benchmark_operation_float PRIVATE lightning_examples)
+
 add_executable(benchmark_multi_rz benchmark_multi_rz.cpp)
 target_link_libraries(benchmark_multi_rz PRIVATE lightning_examples)
 

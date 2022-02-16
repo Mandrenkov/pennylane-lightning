@@ -11,6 +11,13 @@
 #include "ExampleUtil.hpp"
 #include "StateVectorManaged.hpp"
 
+#ifdef USE_SINGLE_PRECISION
+using PrecisionT = float;
+#pragma message "Using single precision"
+#else
+using PrecisionT = double;
+#endif
+
 using namespace Pennylane;
 using namespace Pennylane::Gates;
 using namespace Pennylane::Util;
@@ -33,16 +40,16 @@ double benchmark_gate(RandomEngine &re, KernelType kernel,
     // Generate random generator sequences
     std::vector<std::vector<size_t>> random_wires;
     std::vector<bool> random_inverses;
-    std::vector<std::vector<double>> random_params;
+    std::vector<std::vector<PrecisionT>> random_params;
     random_wires.reserve(num_reps);
     random_inverses.reserve(num_reps);
     random_params.reserve(num_reps);
 
     std::uniform_int_distribution<size_t> inverse_dist(0, 1);
-    std::uniform_real_distribution<double> param_dist(0.0, 2 * M_PI);
+    std::uniform_real_distribution<PrecisionT> param_dist(0.0, 2 * M_PI);
 
     for (uint32_t k = 0; k < num_reps; k++) {
-        std::vector<double> gate_params;
+        std::vector<PrecisionT> gate_params;
         gate_params.reserve(num_params);
 
         random_inverses.emplace_back(static_cast<bool>(inverse_dist(re)));
@@ -70,7 +77,7 @@ double benchmark_gate(RandomEngine &re, KernelType kernel,
     }
 
     // Run benchmark. Total num_reps number of gates is used.
-    StateVectorManaged<double> svdat{num_qubits};
+    StateVectorManaged<PrecisionT> svdat{num_qubits};
 
     std::chrono::time_point<std::chrono::high_resolution_clock> t_start =
         std::chrono::high_resolution_clock::now();
@@ -123,7 +130,7 @@ double benchmark_generator(RandomEngine &re, KernelType kernel,
     }
 
     // Run benchmark. Total num_reps number of gates is used.
-    StateVectorManaged<double> svdat{num_qubits};
+    StateVectorManaged<PrecisionT> svdat{num_qubits};
 
     std::chrono::time_point<std::chrono::high_resolution_clock> t_start =
         std::chrono::high_resolution_clock::now();

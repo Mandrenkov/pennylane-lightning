@@ -28,7 +28,7 @@
 #include "cpu_kernels/GateImplementationsParallelPI.hpp"
 #endif
 
-#if PL_USE_AVX512F
+#if PL_USE_AVX512F && PL_USE_AVX512DQ
 #include "cpu_kernels/GateImplementationsAVX512.hpp"
 #endif
 #include "TypeList.hpp"
@@ -49,7 +49,7 @@ using AvailableKernels =
                    Gates::GateImplementationsParallelLM,
                    Gates::GateImplementationsParallelPI,
 #endif
-#if PL_USE_AVX512F
+#if PL_USE_AVX512F && PL_USE_AVX512DQ
                    Gates::GateImplementationsAVX512,
 #endif
                    void>;

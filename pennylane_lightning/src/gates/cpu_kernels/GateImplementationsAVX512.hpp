@@ -13,7 +13,7 @@
 // limitations under the License.
 /**
  * @file
- * Defines kernel functions with less memory (and fast)
+ * Defines kernel functions with AVX512F and AVX512DQ
  */
 #pragma once
 
@@ -71,22 +71,14 @@ inline __m512 parityS(size_t n, size_t rev_wire) {
                           parity(n + 7, rev_wire) ? -1.0F : 1.0F);
 }
 inline __m512 parityS(size_t n, size_t rev_wire0, size_t rev_wire1) {
-    return _mm512_setr_ps(parity(n + 0, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 0, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 4, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 4, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 5, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 5, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 6, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 6, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 7, rev_wire0, rev_wire1) ? -1.0F : 1.0F,
-                          parity(n + 7, rev_wire0, rev_wire1) ? -1.0F : 1.0F);
+    const auto indices = _mm512_setr_epi64(n+0, n+1, n+2, n+3, n+4, n+5, n+6, n+7);
+    auto parities = _mm512_xor_epi64(_mm512_slli_epi64(indices, 63-rev_wire0),
+                                     _mm512_slli_epi64(indices, 63-rev_wire1));
+    // Duplicate each parity twice after truncating lower 32 bits
+    parities = _mm512_shuffle_epi32(parities, 
+            static_cast<_MM_PERM_ENUM>(0B11110101));
+    const auto mask = _mm512_movepi32_mask(parities);
+    return _mm512_mask_mov_ps(_mm512_set1_ps(1.0), mask, _mm512_set1_ps(-1.0));
 }
 
 inline __m512d parityD(size_t n, size_t rev_wire) {
@@ -100,22 +92,30 @@ inline __m512d parityD(size_t n, size_t rev_wire) {
                           parity(n + 3, rev_wire) ? -1.0L : 1.0L);
 }
 
-inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1, 
-        const __m512i ones_epi64) {
+inline __m512d parityD(size_t n, size_t rev_wire0, size_t rev_wire1) {
     const auto indices = _mm512_setr_epi64(n+0, n+0, n+1, n+1, n+2, n+2, n+3, n+3);
+    auto parities = _mm512_xor_epi64(_mm512_slli_epi64(indices, 63-rev_wire0),
+                                     _mm512_slli_epi64(indices, 63-rev_wire1));
+    const auto mask = _mm512_movepi32_mask(parities);
+    return _mm512_mask_mov_pd(_mm512_set1_pd(1.0), mask, _mm512_set1_pd(-1.0));
+    /*
+    const auto ones_epi64 = _mm512_set1_epi64(1U);
     auto parities = _mm512_xor_epi64(_mm512_srli_epi64(indices, rev_wire0),
                                      _mm512_srli_epi64(indices, rev_wire1));
     parities = _mm512_and_epi64(parities, ones_epi64);
 
-    if constexpr (use_avx512dq) {
-        parities = _mm512_sub_epi64(ones_epi64,
-                                    _mm512_slli_epi64(parities, 1));
-        return _mm512_cvtepi64_pd(parities);
-    }
-    const auto mask = _mm512_cmp_epi64_mask(parities,
-                                            ones_epi64,
-                                            _MM_CMPINT_NE);
-    return _mm512_mask_mov_pd(_mm512_set1_pd(-1.0), mask, _mm512_set1_pd(1.0));
+    parities = _mm512_sub_epi64(ones_epi64,
+                                _mm512_slli_epi64(parities, 1));
+    return _mm512_cvtepi64_pd(parities);
+    return _mm512_setr_pd(parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 0, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 1, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 2, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L,
+                          parity(n + 3, rev_wire0, rev_wire1) ? -1.0L : 1.0L);
+    */
 }
 
 template<typename T>
@@ -420,6 +420,56 @@ class GateImplementationsAVX512 {
     }
 
   public:
+    /**
+     * @brief Apply a single qubit gate to the statevector.
+     *
+     * @param arr Pointer to the statevector.
+     * @param num_qubits Number of qubits.
+     * @param matrix Perfect square matrix in row-major order.
+     * @param wire A wire the gate applies to.
+     * @param inverse Indicate whether inverse should be taken.
+     */
+    template <class PrecisionT>
+    static inline void
+    applySingleQubitOp(std::complex<PrecisionT> *arr, size_t num_qubits,
+                       const std::complex<PrecisionT> *matrix, size_t wire,
+                       bool inverse = false) {
+        const size_t rev_wire = num_qubits - wire - 1;
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+        if (inverse) {
+            for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+                const size_t i0 =
+                    ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+                const size_t i1 = i0 | rev_wire_shift;
+                const std::complex<PrecisionT> v0 = arr[i0];
+                const std::complex<PrecisionT> v1 = arr[i1];
+                arr[i0] = std::conj(matrix[0B00]) * v0 +
+                          std::conj(matrix[0B10]) *
+                              v1; // NOLINT(readability-magic-numbers)
+                arr[i1] = std::conj(matrix[0B01]) * v0 +
+                          std::conj(matrix[0B11]) *
+                              v1; // NOLINT(readability-magic-numbers)
+            }
+        } else {
+            for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
+                const size_t i0 =
+                    ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+                const size_t i1 = i0 | rev_wire_shift;
+                const std::complex<PrecisionT> v0 = arr[i0];
+                const std::complex<PrecisionT> v1 = arr[i1];
+                arr[i0] =
+                    matrix[0B00] * v0 +
+                    matrix[0B01] * v1; // NOLINT(readability-magic-numbers)
+                arr[i1] =
+                    matrix[0B10] * v0 +
+                    matrix[0B11] * v1; // NOLINT(readability-magic-numbers)
+            }
+        }
+    }
+
     template <class PrecisionT>
     static void applyPauliX(std::complex<PrecisionT> *arr,
                             const size_t num_qubits,
@@ -631,8 +681,6 @@ class GateImplementationsAVX512 {
                 const size_t rev_wire1 = num_qubits - wires[1] - 1;
                 __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
-                const auto ones = _mm512_set1_epi64(1U);
-
                 const double isin =
                     inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
                 __m512d imag_sin_factor = _mm512_set_pd(
@@ -643,7 +691,7 @@ class GateImplementationsAVX512 {
 
                     __m512d imag_sin_parity = _mm512_mul_pd(
                         imag_sin_factor,
-                        Internal::parityD(n, rev_wire0, rev_wire1, ones));
+                        Internal::parityD(n, rev_wire0, rev_wire1));
                     __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
 
                     __m512d prod = _mm512_add_pd(
