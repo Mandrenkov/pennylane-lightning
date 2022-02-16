@@ -63,15 +63,10 @@ if(ENABLE_AVX2)
     target_compile_options(lightning_compile_options INTERFACE -mavx2)
 endif()
 
-if(ENABLE_AVX512F)
-    message(STATUS "ENABLE_AVX512F is ON.")
-    target_compile_options(lightning_compile_options INTERFACE -mavx512f)
+if(ENABLE_AVX512)
+    message(STATUS "ENABLE_AVX512 is ON. Use AVX512F and AVX512DQ.")
+    target_compile_options(lightning_compile_options INTERFACE -mavx512f -mavx512dq)
 endif()
-if(ENABLE_AVX512DQ)
-    message(STATUS "ENABLE_AVX512DQ is ON.")
-    target_compile_options(lightning_compile_options INTERFACE -mavx512dq)
-endif()
-
 
 
 if(ENABLE_OPENMP)

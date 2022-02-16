@@ -81,6 +81,36 @@ inline __m512 parityS(size_t n, size_t rev_wire0, size_t rev_wire1) {
     return _mm512_mask_mov_ps(_mm512_set1_ps(1.0), mask, _mm512_set1_ps(-1.0));
 }
 
+template <size_t rev_wire>
+inline __m512 paritySInternal() {
+    if constexpr (rev_wire == 0) {
+        return _mm512_setr_ps(1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F);
+    } else if (rev_wire == 1) {
+        return _mm512_setr_ps(1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F, -1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F,- 1.0F, -1.0F, -1.0F);
+    } else if (rev_wire == 2) {
+        return _mm512_setr_ps(1.0F, 1.0F, 1.0F, 1.0F,
+                              1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F, -1.0F, -1.0F, -1.0F,
+                              -1.0F,- 1.0F, -1.0F, -1.0F);
+    }
+}
+template <size_t rev_wire>
+inline __m512d parityDInternal() {
+    if constexpr (rev_wire == 0) {
+        return _mm512_setr_pd(1.0L, 1.0L, -1.0L, -1.0L,
+                              1.0L, 1.0L, -1.0L, -1.0L);
+    } else if (rev_wire == 1) {
+        return _mm512_setr_pd(1.0L, 1.0L, 1.0L, 1.0L,
+                              -1.0L, -1.0L, -1.0L, -1.0L);
+    }
+}
+
 inline __m512d parityD(size_t n, size_t rev_wire) {
     return _mm512_setr_pd(parity(n + 0, rev_wire) ? -1.0L : 1.0L,
                           parity(n + 0, rev_wire) ? -1.0L : 1.0L,
@@ -231,9 +261,7 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliXFloatInternal(std::complex<float> *arr,
                                            const size_t num_qubits) {
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(float) / 2;
-        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+        for (size_t k = 0; k < (1U << num_qubits); k += 8) {
             __m512 v = _mm512_load_ps(arr + k);
             applyPauliXFloatInternalOp<rev_wire>(v);
             _mm512_store_ps(arr + k, v);
@@ -274,9 +302,7 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliXDoubleInternal(std::complex<double> *arr,
                                           const size_t num_qubits) {
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(double) / 2;
-        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+        for (size_t k = 0; k < (1U << num_qubits); k += 4) {
             __m512d v = _mm512_load_pd(arr + k);
             applyPauliXDoubleInternalOp<rev_wire>(v);
             _mm512_store_pd(arr + k, v);
@@ -337,9 +363,7 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliYFloatInternal(std::complex<float> *arr,
                                          const size_t num_qubits) {
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(float) / 2;
-        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+        for (size_t k = 0; k < (1U << num_qubits); k += 8) {
             __m512 v = _mm512_load_ps(arr + k);
             applyPauliYFloatInternalOp<rev_wire>(v);
             _mm512_store_ps(arr + k, v);
@@ -390,9 +414,7 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliYDoubleInternal(std::complex<double> *arr,
                                             const size_t num_qubits) {
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(double) / 2;
-        for (size_t k = 0; k < (1U << num_qubits); k += step) {
+        for (size_t k = 0; k < (1U << num_qubits); k += 4) {
             __m512d v = _mm512_load_pd(arr + k);
             applyPauliYDoubleInternalOp<rev_wire>(v);
             _mm512_store_pd(arr + k, v);
@@ -419,57 +441,121 @@ class GateImplementationsAVX512 {
         }
     }
 
-  public:
-    /**
-     * @brief Apply a single qubit gate to the statevector.
-     *
-     * @param arr Pointer to the statevector.
-     * @param num_qubits Number of qubits.
-     * @param matrix Perfect square matrix in row-major order.
-     * @param wire A wire the gate applies to.
-     * @param inverse Indicate whether inverse should be taken.
-     */
-    template <class PrecisionT>
-    static inline void
-    applySingleQubitOp(std::complex<PrecisionT> *arr, size_t num_qubits,
-                       const std::complex<PrecisionT> *matrix, size_t wire,
-                       bool inverse = false) {
-        const size_t rev_wire = num_qubits - wire - 1;
+
+    template <size_t rev_wire, class ParamT>
+    static void applyRZFloatInternal(std::complex<float> *arr, const size_t num_qubits,
+                                [[maybe_unused]] bool inverse, ParamT angle) {
+        __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
+        const float isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        __m512 imag_sin_factor = _mm512_set_ps(
+            -isin, isin, -isin, isin, -isin, isin, -isin, isin, -isin,
+            isin, -isin, isin, -isin, isin, -isin, isin);
+
+        for (size_t n = 0; n < (1U << num_qubits); n += 8) {
+            __m512 coeffs = _mm512_load_ps(arr + n);
+            __m512 prod_cos = _mm512_mul_ps(real_cos_factor, coeffs);
+
+            __m512 imag_sin_parity = _mm512_mul_ps(
+                imag_sin_factor, Internal::paritySInternal<rev_wire>());
+            __m512 prod_sin = _mm512_mul_ps(coeffs, imag_sin_parity);
+
+            __m512 prod = _mm512_add_ps(
+                prod_cos, _mm512_permute_ps(prod_sin, 0B10110001));
+            _mm512_store_ps(arr + n, prod);
+        }
+    }
+    template <class ParamT>
+    static void applyRZFloatExternal(std::complex<float> *arr,
+                                     const size_t num_qubits,
+                                     const size_t rev_wire,
+                                     [[maybe_unused]] bool inverse,
+                                     ParamT angle) {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        if (inverse) {
-            for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
-                const size_t i0 =
-                    ((k << 1U) & wire_parity_inv) | (wire_parity & k);
-                const size_t i1 = i0 | rev_wire_shift;
-                const std::complex<PrecisionT> v0 = arr[i0];
-                const std::complex<PrecisionT> v1 = arr[i1];
-                arr[i0] = std::conj(matrix[0B00]) * v0 +
-                          std::conj(matrix[0B10]) *
-                              v1; // NOLINT(readability-magic-numbers)
-                arr[i1] = std::conj(matrix[0B01]) * v0 +
-                          std::conj(matrix[0B11]) *
-                              v1; // NOLINT(readability-magic-numbers)
-            }
-        } else {
-            for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
-                const size_t i0 =
-                    ((k << 1U) & wire_parity_inv) | (wire_parity & k);
-                const size_t i1 = i0 | rev_wire_shift;
-                const std::complex<PrecisionT> v0 = arr[i0];
-                const std::complex<PrecisionT> v1 = arr[i1];
-                arr[i0] =
-                    matrix[0B00] * v0 +
-                    matrix[0B01] * v1; // NOLINT(readability-magic-numbers)
-                arr[i1] =
-                    matrix[0B10] * v0 +
-                    matrix[0B11] * v1; // NOLINT(readability-magic-numbers)
-            }
+        const __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
+        const float isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(float) / 2;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            const __m512 v0 = _mm512_load_ps(arr + i0);
+            const __m512 v1 = _mm512_load_ps(arr + i1);
+
+            const auto v0_cos = _mm512_mul_ps(v0, real_cos_factor);
+            const auto v0_isin = Internal::productImagS(v0, _mm512_set1_ps(isin));
+
+            const auto v1_cos = _mm512_mul_ps(v1, real_cos_factor);
+            const auto v1_isin = Internal::productImagS(v1, _mm512_set1_ps(-isin));
+
+            _mm512_store_ps(arr + i0, _mm512_add_ps(v0_cos, v0_isin));
+            _mm512_store_ps(arr + i1, _mm512_add_ps(v1_cos, v1_isin));
         }
     }
 
+    template <size_t rev_wire, class ParamT>
+    static void applyRZDoubleInternal(std::complex<double> *arr, const size_t num_qubits,
+                                [[maybe_unused]] bool inverse, ParamT angle) {
+        __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
+        const double isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        __m512d imag_sin_factor = _mm512_set_pd(
+            -isin, isin, -isin, isin, -isin, isin, -isin, isin);
+
+        for (size_t n = 0; n < (1U << num_qubits); n += 4) {
+            __m512d coeffs = _mm512_load_pd(arr + n);
+            __m512d prod_cos = _mm512_mul_pd(real_cos_factor, coeffs);
+
+            __m512d imag_sin_parity = _mm512_mul_pd(
+                imag_sin_factor, Internal::parityDInternal<rev_wire>());
+            __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
+
+            __m512d prod = _mm512_add_pd(
+                prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
+            _mm512_store_pd(arr + n, prod);
+        }
+    }
+    template <class ParamT>
+    static void applyRZDoubleExternal(std::complex<double> *arr,
+                                     const size_t num_qubits,
+                                     const size_t rev_wire,
+                                     [[maybe_unused]] bool inverse,
+                                     ParamT angle) {
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+        __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
+        const double isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+
+        constexpr static auto step =
+            data_alignment_in_bytes / sizeof(double) / 2;
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            const __m512d v0 = _mm512_load_pd(arr + i0);
+            const __m512d v1 = _mm512_load_pd(arr + i1);
+
+            const auto v0_cos = _mm512_mul_pd(v0, real_cos_factor);
+            const auto v0_isin = Internal::productImagD(v0, _mm512_set1_pd(isin));
+
+            const auto v1_cos = _mm512_mul_pd(v1, real_cos_factor);
+            const auto v1_isin = Internal::productImagD(v1, _mm512_set1_pd(-isin));
+
+            _mm512_store_pd(arr + i0, _mm512_add_pd(v0_cos, v0_isin));
+            _mm512_store_pd(arr + i1, _mm512_add_pd(v1_cos, v1_isin));
+        }
+    }
+
+  public:
     template <class PrecisionT>
     static void applyPauliX(std::complex<PrecisionT> *arr,
                             const size_t num_qubits,
@@ -587,23 +673,19 @@ class GateImplementationsAVX512 {
             } else {
                 const size_t rev_wire = num_qubits - wires[0] - 1;
 
-                __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
-                const float isin =
-                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
-                __m512 imag_sin_factor = _mm512_set_ps(
-                    -isin, isin, -isin, isin, -isin, isin, -isin, isin, -isin,
-                    isin, -isin, isin, -isin, isin, -isin, isin);
-                for (size_t n = 0; n < (1U << num_qubits); n += 8) {
-                    __m512 coeffs = _mm512_load_ps(arr + n);
-                    __m512 prod_cos = _mm512_mul_ps(real_cos_factor, coeffs);
-
-                    __m512 imag_sin_parity = _mm512_mul_ps(
-                        imag_sin_factor, Internal::parityS(n, rev_wire));
-                    __m512 prod_sin = _mm512_mul_ps(coeffs, imag_sin_parity);
-
-                    __m512 prod = _mm512_add_ps(
-                        prod_cos, _mm512_permute_ps(prod_sin, 0B10110001));
-                    _mm512_store_ps(arr + n, prod);
+                switch(rev_wire) {
+                case 0:
+                    applyRZFloatInternal<0>(arr, num_qubits, inverse, angle);
+                    return;
+                case 1:
+                    applyRZFloatInternal<1>(arr, num_qubits, inverse, angle);
+                    return;
+                case 2:
+                    applyRZFloatInternal<2>(arr, num_qubits, inverse, angle);
+                    return;
+                default:
+                    applyRZFloatExternal(arr, num_qubits, rev_wire, inverse, angle);
+                    return;
                 }
             }
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -612,23 +694,17 @@ class GateImplementationsAVX512 {
                                                angle);
             } else {
                 const size_t rev_wire = num_qubits - wires[0] - 1;
-                __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
-                const double isin =
-                    inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
-                __m512d imag_sin_factor = _mm512_set_pd(
-                    -isin, isin, -isin, isin, -isin, isin, -isin, isin);
-                for (size_t n = 0; n < (1U << num_qubits); n += 4) {
-                    __m512d coeffs = _mm512_load_pd(arr + n);
-                    __m512d prod_cos = _mm512_mul_pd(real_cos_factor, coeffs);
-
-                    __m512d imag_sin_parity = _mm512_mul_pd(
-                        imag_sin_factor, Internal::parityD(n, rev_wire));
-                    __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
-
-                    __m512d prod = _mm512_add_pd(
-                        prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
-                    _mm512_store_pd(arr + n, prod);
+                switch(rev_wire) {
+                case 0:
+                    applyRZDoubleInternal<0>(arr, num_qubits, inverse, angle);
+                    return;
+                case 1:
+                    applyRZDoubleInternal<1>(arr, num_qubits, inverse, angle);
+                    return;
+                default:
+                    applyRZDoubleExternal(arr, num_qubits, rev_wire, inverse, angle);
+                    return;
                 }
             }
         } else {

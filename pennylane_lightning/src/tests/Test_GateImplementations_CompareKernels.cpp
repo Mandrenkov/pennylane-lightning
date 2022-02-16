@@ -98,6 +98,9 @@ void testApplyGate(RandomEngine& re, size_t num_qubits) {
 
     INFO("Kernels implementing " << lookup(Constant::gate_names, gate_op)
             << " are " << kernelsToString<Kernels>());
+
+    INFO("PrecisionT, ParamT = " << PrecisionToName<PrecisionT>::value 
+            << ", " << PrecisionToName<ParamT>::value);
     
     if constexpr (gate_op != GateOperation::Matrix) {
         const auto wires = createWires(gate_op, num_qubits);

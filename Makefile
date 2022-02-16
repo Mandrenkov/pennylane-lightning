@@ -91,15 +91,9 @@ test-cpp-omp:
 	cmake --build ./BuildTests --target runner
 	cmake --build ./BuildTests --target test
 
-test-cpp-avx512f:
+test-cpp-avx512:
 	rm -rf ./BuildTests
-	cmake $(LIGHTNING_CPP_DIR) -BBuildTests -DBUILD_TESTS=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512F=ON
-	cmake --build ./BuildTests --target runner
-	cmake --build ./BuildTests --target test
-
-test-cpp-avx512dq:
-	rm -rf ./BuildTests
-	cmake $(LIGHTNING_CPP_DIR) -BBuildTests -DBUILD_TESTS=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512F=ON
+	cmake $(LIGHTNING_CPP_DIR) -BBuildTests -DBUILD_TESTS=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512=ON
 	cmake --build ./BuildTests --target runner
 	cmake --build ./BuildTests --target test
 
@@ -107,7 +101,7 @@ test-cpp-avx512dq:
 benchmark:
 	cmake --build BuildBench --target clean || true
 	rm -rf ./BuildBench/CMakeCache.txt ./BuildBench/compiler_info.txt ./BuildBench/run_gate_benchmark.sh
-	cmake $(LIGHTNING_CPP_DIR) -BBuildBench -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512F=ON -DENABLE_AVX512DQ=ON
+	cmake $(LIGHTNING_CPP_DIR) -BBuildBench -DBUILD_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512=ON
 	cmake --build ./BuildBench
 
 .PHONY: format format-cpp format-python

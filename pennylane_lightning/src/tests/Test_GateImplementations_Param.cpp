@@ -222,6 +222,14 @@ void testApplyRZ() {
 
         CHECK(st == PLApprox(expected_results[index]));
     }
+
+    for (size_t index = 0; index < num_qubits; index++) {
+        auto st = createPlusState<PrecisionT>(num_qubits);
+
+        GateImplementation::applyRZ(st.data(), num_qubits, {index}, true,
+                                    {-angles[index]});
+        CHECK(st == PLApprox(expected_results[index]));
+    }
 }
 PENNYLANE_RUN_TEST(RZ);
 
