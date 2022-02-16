@@ -74,6 +74,7 @@ auto applyGate(TestVector<std::complex<PrecisionT>> ini,
         num_qubits, wires, inverse, params);
     return ini;
 }
+
 template<Gates::GateOperation gate_op, typename PrecisionT, typename ParamT,
     typename Kernels, size_t... I> 
 auto applyGateForImplemetingKernels(
