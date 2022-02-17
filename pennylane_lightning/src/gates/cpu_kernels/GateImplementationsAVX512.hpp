@@ -806,7 +806,8 @@ class GateImplementationsAVX512 {
             -isin, isin, -isin, isin, -isin, isin, -isin, isin);
         const __m512d imag_sin_parity = _mm512_mul_pd(imag_sin_factor, parity);
 
-        for (size_t n = 0; n < (1U << num_qubits); n += 4) {
+        for (size_t n = 0; n < (1U << num_qubits);
+                n += step_for_complex_precision<double>) {
             __m512d coeffs = _mm512_load_pd(arr + n);
             __m512d prod_cos = _mm512_mul_pd(real_cos_factor, coeffs);
 
@@ -839,7 +840,8 @@ class GateImplementationsAVX512 {
         const __m512d imag_sin_parity1 = _mm512_mul_pd(imag_sin_parity0,
                                                        _mm512_set1_pd(-1.0L));
 
-        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += 4) {
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+                k += step_for_complex_precision<double>) {
             const size_t i0 = ((k << 1U) & max_wire_parity_inv) | (max_wire_parity & k);
             const size_t i1 = i0 | max_rev_wire_shift;
 
@@ -886,32 +888,35 @@ class GateImplementationsAVX512 {
             inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
         const __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
-        for (size_t k = 0; k < Util::exp2(num_qubits - 2); k+=4) {
+        for (size_t k = 0; k < Util::exp2(num_qubits - 2);
+                k += step_for_complex_precision<double>) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
             const size_t i10 = i00 | rev_wire1_shift;
             const size_t i01 = i00 | rev_wire0_shift;
             const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
 
-            __m512d v = _mm512_load_pd(arr + i00); //00
-            __m512d prod_cos = _mm512_mul_pd(real_cos_factor, v);
-            __m512d prod_isin = Internal::productImagD(v, _mm512_set1_pd(isin));
-            _mm512_store_pd(arr + i00, _mm512_add_pd(prod_cos, prod_isin));
+            const __m512d v00 = _mm512_load_pd(arr + i00); //00
+            const __m512d v01 = _mm512_load_pd(arr + i01); //01
+            const __m512d v10 = _mm512_load_pd(arr + i10); //10
+            const __m512d v11 = _mm512_load_pd(arr + i11); //11
 
-            v = _mm512_load_pd(arr + i01); //01
-            prod_cos = _mm512_mul_pd(real_cos_factor, v);
-            prod_isin = Internal::productImagD(v, _mm512_set1_pd(-isin));
-            _mm512_store_pd(arr + i01, _mm512_add_pd(prod_cos, prod_isin));
+            const __m512d prod_cos00 = _mm512_mul_pd(real_cos_factor, v00);
+            const __m512d prod_isin00 = Internal::productImagD(v00, _mm512_set1_pd(isin));
 
-            v = _mm512_load_pd(arr + i10); //10
-            prod_cos = _mm512_mul_pd(real_cos_factor, v);
-            prod_isin = Internal::productImagD(v, _mm512_set1_pd(-isin));
-            _mm512_store_pd(arr + i10, _mm512_add_pd(prod_cos, prod_isin));
+            const __m512d prod_cos01 = _mm512_mul_pd(real_cos_factor, v01);
+            const __m512d prod_isin01 = Internal::productImagD(v01, _mm512_set1_pd(-isin));
 
-            v = _mm512_load_pd(arr + i11); //11
-            prod_cos = _mm512_mul_pd(real_cos_factor, v);
-            prod_isin = Internal::productImagD(v, _mm512_set1_pd(isin));
-            _mm512_store_pd(arr + i11, _mm512_add_pd(prod_cos, prod_isin));
+            const __m512d prod_cos10 = _mm512_mul_pd(real_cos_factor, v10);
+            const __m512d prod_isin10 = Internal::productImagD(v10, _mm512_set1_pd(-isin));
+
+            const __m512d prod_cos11 = _mm512_mul_pd(real_cos_factor, v11);
+            const __m512d prod_isin11 = Internal::productImagD(v11, _mm512_set1_pd(isin));
+
+            _mm512_store_pd(arr + i00, _mm512_add_pd(prod_cos00, prod_isin00));
+            _mm512_store_pd(arr + i01, _mm512_add_pd(prod_cos01, prod_isin01));
+            _mm512_store_pd(arr + i10, _mm512_add_pd(prod_cos10, prod_isin10));
+            _mm512_store_pd(arr + i11, _mm512_add_pd(prod_cos11, prod_isin11));
         }
     }
 
