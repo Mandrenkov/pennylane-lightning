@@ -18,9 +18,9 @@
 #pragma once
 
 #include <cstdlib>
+#include <tuple>
 #include <type_traits>
 #include <utility>
-#include <tuple>
 
 namespace Pennylane::Util {
 template <typename T, typename... Ts> struct TypeNode {
@@ -65,15 +65,13 @@ template <typename TypeList> constexpr size_t length() {
     }
 }
 
-template <typename T, typename U>
-struct PrependToTypeList;
+template <typename T, typename U> struct PrependToTypeList;
 
-template <typename T, typename ...Ts>
+template <typename T, typename... Ts>
 struct PrependToTypeList<T, TypeNode<Ts...>> {
     using Type = TypeNode<T, Ts...>;
 };
-template <typename T>
-struct PrependToTypeList<T, void> {
+template <typename T> struct PrependToTypeList<T, void> {
     using Type = TypeNode<T, void>;
 };
 

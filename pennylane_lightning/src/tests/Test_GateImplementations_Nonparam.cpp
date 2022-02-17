@@ -143,18 +143,16 @@ void testApplyHadamard() {
     for (size_t index = 0; index < num_qubits; index++) {
         auto st = createZeroState<PrecisionT>(num_qubits);
 
-        CHECK(st[0] == ComplexPrecisionT{1, 0});
         GateImplementation::applyHadamard(st.data(), num_qubits, {index},
                                           false);
 
-        ComplexPrecisionT expected(1 / std::sqrt(2), 0);
-        CHECK(expected.real() == Approx(st[0].real()));
-        CHECK(expected.imag() == Approx(st[0].imag()));
-
-        CHECK(expected.real() ==
-              Approx(st[0b1 << (num_qubits - index - 1)].real()));
-        CHECK(expected.imag() ==
-              Approx(st[0b1 << (num_qubits - index - 1)].imag()));
+        std::vector<char> expected_string;
+        expected_string.resize(num_qubits);
+        std::fill(expected_string.begin(), expected_string.end(), '0');
+        expected_string[index] = '+';
+        const auto expected = createProductState<PrecisionT>(
+            std::string_view{expected_string.data(), num_qubits});
+        CHECK(expected == PLApprox(st));
     }
 }
 PENNYLANE_RUN_TEST(Hadamard);
