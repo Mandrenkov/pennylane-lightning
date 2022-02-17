@@ -190,8 +190,6 @@ inline __m512d productImagD(__m512d val) {
     __m512d prod_shuffled =_mm512_permutex_pd(val, 0B10110001);
     return _mm512_mul_pd(prod_shuffled, _mm512_load_pd(&ImagFactor<double>::value));
 }
-
-
 } // namespace Internal
 
 class GateImplementationsAVX512 {
@@ -204,9 +202,15 @@ class GateImplementationsAVX512 {
     constexpr static KernelType kernel_id = KernelType::AVX512;
     constexpr static std::string_view name = "AVX512";
     constexpr static uint32_t data_alignment_in_bytes = 64;
+    
+    template<typename T>
+    constexpr static size_t step_for_complex_precision = 
+        data_alignment_in_bytes / sizeof(T) / 2;
 
     constexpr static std::array implemented_gates = {
         GateOperation::PauliX,
+        GateOperation::PauliY,
+        GateOperation::PauliZ,
         GateOperation::RZ,
         GateOperation::IsingZZ,
     };
@@ -232,7 +236,8 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliXFloatInternal(std::complex<float> *arr,
                                            const size_t num_qubits) {
-        for (size_t k = 0; k < (1U << num_qubits); k += 8) {
+        for (size_t k = 0; k < (1U << num_qubits); 
+                k += step_for_complex_precision<float>) {
             __m512 v = _mm512_load_ps(arr + k);
             applyPauliXFloatInternalOp<rev_wire>(v);
             _mm512_store_ps(arr + k, v);
@@ -244,9 +249,8 @@ class GateImplementationsAVX512 {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(float) / 2;
-        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+                k += step_for_complex_precision<float>) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
@@ -273,7 +277,8 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliXDoubleInternal(std::complex<double> *arr,
                                           const size_t num_qubits) {
-        for (size_t k = 0; k < (1U << num_qubits); k += 4) {
+        for (size_t k = 0; k < (1U << num_qubits);
+                k += step_for_complex_precision<double>) {
             __m512d v = _mm512_load_pd(arr + k);
             applyPauliXDoubleInternalOp<rev_wire>(v);
             _mm512_store_pd(arr + k, v);
@@ -285,9 +290,8 @@ class GateImplementationsAVX512 {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(double) / 2;
-        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+                k += step_for_complex_precision<double>) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
@@ -334,7 +338,8 @@ class GateImplementationsAVX512 {
     template <size_t rev_wire>
     static void applyPauliYFloatInternal(std::complex<float> *arr,
                                          const size_t num_qubits) {
-        for (size_t k = 0; k < (1U << num_qubits); k += 8) {
+        for (size_t k = 0; k < (1U << num_qubits);
+                k += step_for_complex_precision<float>) {
             __m512 v = _mm512_load_ps(arr + k);
             applyPauliYFloatInternalOp<rev_wire>(v);
             _mm512_store_ps(arr + k, v);
@@ -346,9 +351,8 @@ class GateImplementationsAVX512 {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
-        constexpr static auto step =
-            data_alignment_in_bytes / sizeof(float) / 2;
-        for (size_t k = 0; k < Util::exp2(num_qubits - 1); k += step) {
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+                k += step_for_complex_precision<float>) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
@@ -412,6 +416,103 @@ class GateImplementationsAVX512 {
         }
     }
 
+    static void applyPauliZFloatInternal(std::complex<float> *arr,
+                                         const size_t num_qubits,
+                                         const size_t rev_wire) {
+        __m512 factor;
+        switch(rev_wire) {
+        case 0:
+            factor = _mm512_setr_ps(
+                1.0F, 1.0F, -1.0F, -1.0F,
+                1.0F, 1.0F, -1.0F, -1.0F,
+                1.0F, 1.0F, -1.0F, -1.0F,
+                1.0F, 1.0F, -1.0F, -1.0F
+            );
+            break;
+        case 1:
+            factor = _mm512_setr_ps(
+                1.0F, 1.0F, 1.0F, 1.0F,
+                -1.0F, -1.0F, -1.0F, -1.0F,
+                1.0F, 1.0F, 1.0F, 1.0F,
+                -1.0F, -1.0F, -1.0F, -1.0F
+            );
+            break;
+        case 2:
+            factor = _mm512_setr_ps(
+                1.0F, 1.0F, 1.0F, 1.0F,
+                1.0F, 1.0F, 1.0F, 1.0F,
+                -1.0F, -1.0F, -1.0F, -1.0F,
+                -1.0F, -1.0F, -1.0F, -1.0F
+            );
+            break;
+        default:
+            PL_UNREACHABLE;
+        }
+        for (size_t k = 0; k < (1U << num_qubits); k += 8) {
+            __m512 v = _mm512_load_ps(arr + k);
+            v = _mm512_mul_ps(v, factor);
+            _mm512_store_ps(arr + k, v);
+        }
+    }
+    static void applyPauliZFloatExternal(std::complex<float> *arr,
+                                         const size_t num_qubits,
+                                         const size_t rev_wire) {
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1); 
+                k += step_for_complex_precision<float>) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            __m512 v1 = _mm512_load_ps(arr + i1);
+            v1 = _mm512_mul_ps(v1, _mm512_set1_ps(-1.0F));
+            _mm512_store_ps(arr + i1, v1);
+        }
+    }
+    static void applyPauliZDoubleInternal(std::complex<double> *arr,
+                                         const size_t num_qubits,
+                                         const size_t rev_wire) {
+        __m512d factor;
+        switch(rev_wire) {
+        case 0:
+            factor = _mm512_setr_pd(
+                1.0F, 1.0F, -1.0F, -1.0F,
+                1.0F, 1.0F, -1.0F, -1.0F
+            );
+            break;
+        case 1:
+            factor = _mm512_setr_pd(
+                1.0F, 1.0F, 1.0F, 1.0F,
+                -1.0F, -1.0F, -1.0F, -1.0F
+            );
+            break;
+        default:
+            PL_UNREACHABLE;
+        }
+        for (size_t k = 0; k < (1U << num_qubits);
+                k += step_for_complex_precision<double>) {
+            __m512d v = _mm512_load_pd(arr + k);
+            v = _mm512_mul_pd(v, factor);
+            _mm512_store_pd(arr + k, v);
+        }
+    }
+    static void applyPauliZDoubleExternal(std::complex<double> *arr,
+                                          const size_t num_qubits,
+                                          const size_t rev_wire) {
+        const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
+        const size_t wire_parity = fillTrailingOnes(rev_wire);
+        const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+        for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+                k += step_for_complex_precision<double>) {
+            const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
+            const size_t i1 = i0 | rev_wire_shift;
+
+            __m512d v1 = _mm512_load_pd(arr + i1);
+            v1 = _mm512_mul_pd(v1, _mm512_set1_pd(-1.0F));
+            _mm512_store_pd(arr + i1, v1);
+        }
+    }
 
     template <class ParamT>
     static void applyRZFloatInternal(std::complex<float> *arr,
@@ -688,8 +789,6 @@ class GateImplementationsAVX512 {
         }
     }
 
-
-
     template <class ParamT>
     static void applyIsingZZDoubleInternalInternal(std::complex<double>* arr,
             size_t num_qubits, [[maybe_unused]] size_t rev_wire0,
@@ -922,6 +1021,59 @@ class GateImplementationsAVX512 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
+
+    template <class PrecisionT>
+    static void applyPauliZ(std::complex<PrecisionT> *arr,
+                            const size_t num_qubits,
+                            const std::vector<size_t> &wires,
+                            [[maybe_unused]] bool inverse) {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            if (num_qubits < 3) {
+                GateImplementationsLM::applyPauliZ(arr, num_qubits, wires,
+                                                   inverse);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                applyPauliZFloatInternal(arr, num_qubits, 0);
+                return;                                    
+            case 1:                                        
+                applyPauliZFloatInternal(arr, num_qubits, 1);
+                return;                                    
+            case 2:                                        
+                applyPauliZFloatInternal(arr, num_qubits, 2);
+                return;
+            default:
+                applyPauliZFloatExternal(arr, num_qubits, rev_wire);
+                return;
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            if (num_qubits < 2) {
+                GateImplementationsLM::applyPauliZ(arr, num_qubits, wires,
+                                                   inverse);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                applyPauliZDoubleInternal(arr, num_qubits, 0);
+                return;
+            case 1:
+                applyPauliZDoubleInternal(arr, num_qubits, 1);
+                return;
+            default:
+                applyPauliZDoubleExternal(arr, num_qubits, rev_wire);
+                return;
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
     /* Version iterate over all indices */
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
@@ -933,35 +1085,38 @@ class GateImplementationsAVX512 {
             if (num_qubits < 3) {
                 GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
                                                angle);
-            } else {
-                const size_t rev_wire = num_qubits - wires[0] - 1;
+                return;
+            } // else
+            const size_t rev_wire = num_qubits - wires[0] - 1;
 
-                if (rev_wire < 3) {
-                    applyRZFloatInternal(arr, num_qubits, rev_wire, inverse, angle);
-                    return;
-                }
-                applyRZFloatExternal(arr, num_qubits, rev_wire, inverse, angle);
+            if (rev_wire < 3) {
+                applyRZFloatInternal(arr, num_qubits, rev_wire, inverse, angle);
                 return;
             }
+            applyRZFloatExternal(arr, num_qubits, rev_wire, inverse, angle);
+            return;
         } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
                                                angle);
-            } else {
-                const size_t rev_wire = num_qubits - wires[0] - 1;
-                if(rev_wire < 2) {
-                    applyRZDoubleInternal(arr, num_qubits, rev_wire, inverse, angle);
-                    return;
-                }
-                applyRZDoubleExternal(arr, num_qubits, rev_wire, inverse, angle);
+                return;
+            } // else 
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            if(rev_wire < 2) {
+                applyRZDoubleInternal(arr, num_qubits, rev_wire, inverse, angle);
                 return;
             }
+            applyRZDoubleExternal(arr, num_qubits, rev_wire, inverse, angle);
+            return;
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
                               std::is_same_v<PrecisionT, double>,
                           "Only float or double is supported.");
         }
     }
+
+
     /* Version iterate over all indices */
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyIsingZZ(std::complex<PrecisionT> *arr,
@@ -974,39 +1129,38 @@ class GateImplementationsAVX512 {
             if (num_qubits < 3) {
                 GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
                                                     inverse, angle);
+                return;
+            } 
+            const size_t rev_wire0 = num_qubits - wires[1] - 1;
+            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+            if (rev_wire0 < 3 && rev_wire1 < 3) {
+                applyIsingZZFloatInternalInternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
+            } else if (std::min(rev_wire0, rev_wire1) < 3) {
+                applyIsingZZFloatInternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
             } else {
-                const size_t rev_wire0 = num_qubits - wires[1] - 1;
-                const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
-                if (rev_wire0 < 3 && rev_wire1 < 3) {
-                    applyIsingZZFloatInternalInternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-                    return ;
-                } else if (std::min(rev_wire0, rev_wire1)< 3) {
-                    applyIsingZZFloatInternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-                    return ;
-                } else {
-                    applyIsingZZFloatExternalExternal(arr, num_qubits, rev_wire1, rev_wire0, inverse, angle);
-                    return ;
-                }
+                applyIsingZZFloatExternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
                                                     inverse, angle);
+                return;
+            }
+            const size_t rev_wire0 = num_qubits - wires[1] - 1;
+            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+            
+            if (rev_wire0 < 2 && rev_wire1 < 2) {
+                applyIsingZZDoubleInternalInternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
+            } else if (std::min(rev_wire0, rev_wire1) < 2) {
+                applyIsingZZDoubleInternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
             } else {
-                const size_t rev_wire0 = num_qubits - wires[1] - 1;
-                const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
-                
-                if (rev_wire0 < 2 && rev_wire1 < 2) {
-                    applyIsingZZDoubleInternalInternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-                    return ;
-                } else if (std::min(rev_wire0, rev_wire1) < 2) {
-                    applyIsingZZDoubleInternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-                    return ;
-                } else {
-                    applyIsingZZDoubleExternalExternal(arr, num_qubits, rev_wire1, rev_wire0, inverse, angle);
-                    return ;
-                }
-
+                applyIsingZZDoubleExternalExternal(arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                return ;
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
