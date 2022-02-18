@@ -62,6 +62,9 @@ void applyRZFloatExternal(std::complex<float> *arr, const size_t num_qubits,
     const __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
     const float isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
 
+    const auto plus_isin_prod = Util::ProdPureImag<float>(isin);
+    const auto minus_isin_prod = Util::ProdPureImag<float>(-isin);
+
     for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<float>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -71,10 +74,10 @@ void applyRZFloatExternal(std::complex<float> *arr, const size_t num_qubits,
         const __m512 v1 = _mm512_load_ps(arr + i1);
 
         const auto v0_cos = _mm512_mul_ps(v0, real_cos_factor);
-        const auto v0_isin = Util::productImagS(v0, _mm512_set1_ps(isin));
+        const auto v0_isin = plus_isin_prod.product(v0);
 
         const auto v1_cos = _mm512_mul_ps(v1, real_cos_factor);
-        const auto v1_isin = Util::productImagS(v1, _mm512_set1_ps(-isin));
+        const auto v1_isin = minus_isin_prod.product(v1);
 
         _mm512_store_ps(arr + i0, _mm512_add_ps(v0_cos, v0_isin));
         _mm512_store_ps(arr + i1, _mm512_add_ps(v1_cos, v1_isin));
@@ -116,6 +119,9 @@ void applyRZDoubleExternal(std::complex<double> *arr, const size_t num_qubits,
     const __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
     const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
 
+    const auto plus_isin_prod = Util::ProdPureImag<double>(isin);
+    const auto minus_isin_prod = Util::ProdPureImag<double>(-isin);
+
     for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<double>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -125,10 +131,10 @@ void applyRZDoubleExternal(std::complex<double> *arr, const size_t num_qubits,
         const __m512d v1 = _mm512_load_pd(arr + i1);
 
         const auto v0_cos = _mm512_mul_pd(v0, real_cos_factor);
-        const auto v0_isin = Util::productImagD(v0, _mm512_set1_pd(isin));
+        const auto v0_isin = plus_isin_prod.product(v0);
 
         const auto v1_cos = _mm512_mul_pd(v1, real_cos_factor);
-        const auto v1_isin = Util::productImagD(v1, _mm512_set1_pd(-isin));
+        const auto v1_isin = minus_isin_prod.product(v1);
 
         _mm512_store_pd(arr + i0, _mm512_add_pd(v0_cos, v0_isin));
         _mm512_store_pd(arr + i1, _mm512_add_pd(v1_cos, v1_isin));

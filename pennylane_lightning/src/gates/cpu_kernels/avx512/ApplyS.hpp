@@ -154,7 +154,7 @@ void applySDoubleExternal(std::complex<double> *arr,
         const size_t i1 = i0 | rev_wire_shift;
 
         __m512d v1 = _mm512_load_pd(arr + i1);
-        __m512d prod_shuffled = _mm512_permutex_pd(v1, 0B10110001);
+        __m512d prod_shuffled = _mm512_permute_pd(v1, 0B01010101);
 
         v1 = _mm512_mul_pd(prod_shuffled, imag_factor);
         _mm512_store_pd(arr + i1, v1);

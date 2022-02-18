@@ -69,6 +69,10 @@ inline void applyPauliYFloatExternal(std::complex<float> *arr,
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+    const auto minus_imag_prod = Util::ProdPureImag<float>(-1.0);
+    const auto plus_imag_prod = Util::ProdPureImag<float>(1.0);
+
     for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<float>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -76,9 +80,8 @@ inline void applyPauliYFloatExternal(std::complex<float> *arr,
 
         const __m512 v0 = _mm512_load_ps(arr + i0);
         const __m512 v1 = _mm512_load_ps(arr + i1);
-        _mm512_store_ps(arr + i0,
-                        Util::productImagS(v1, _mm512_set1_ps(-1.0F)));
-        _mm512_store_ps(arr + i1, Util::productImagS(v0));
+        _mm512_store_ps(arr + i0, minus_imag_prod.product(v1));
+        _mm512_store_ps(arr + i1, plus_imag_prod.product(v0));
     }
 }
 
@@ -113,6 +116,10 @@ inline void applyPauliYDoubleExternal(std::complex<double> *arr,
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
+
+    const auto minus_imag_prod = Util::ProdPureImag<double>(-1.0);
+    const auto plus_imag_prod = Util::ProdPureImag<double>(1.0);
+
     for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<double>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -121,9 +128,8 @@ inline void applyPauliYDoubleExternal(std::complex<double> *arr,
         const __m512d v0 = _mm512_load_pd(arr + i0);
         const __m512d v1 = _mm512_load_pd(arr + i1);
 
-        _mm512_store_pd(arr + i0,
-                        Util::productImagD(v1, _mm512_set1_pd(-1.0L)));
-        _mm512_store_pd(arr + i1, Util::productImagD(v0));
+        _mm512_store_pd(arr + i0, minus_imag_prod.product(v1));
+        _mm512_store_pd(arr + i1, plus_imag_prod.product(v0));
     }
 }
 /// @endcond

@@ -149,6 +149,9 @@ void applyIsingZZFloatExternalExternal(std::complex<float> *arr,
     const float isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
     const __m512 real_cos_factor = _mm512_set1_ps(std::cos(angle / 2));
 
+    const auto isin_prod = Util::ProdPureImag<float>(isin);
+    const auto minus_isin_prod = Util::ProdPureImag<float>(-isin);
+
     for (size_t k = 0; k < exp2(num_qubits - 2);
          k += step_for_complex_precision<float>) {
         const size_t i00 = ((k << 2U) & parity_high) |
@@ -157,25 +160,28 @@ void applyIsingZZFloatExternalExternal(std::complex<float> *arr,
         const size_t i01 = i00 | rev_wire0_shift;
         const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
 
-        __m512 v = _mm512_load_ps(arr + i00); // 00
-        __m512 prod_cos = _mm512_mul_ps(real_cos_factor, v);
-        __m512 prod_isin = Util::productImagS(v, _mm512_set1_ps(isin));
-        _mm512_store_ps(arr + i00, _mm512_add_ps(prod_cos, prod_isin));
+        const __m512 v00 = _mm512_load_ps(arr + i00); // 00
+        const __m512 v01 = _mm512_load_ps(arr + i01); // 01
+        const __m512 v10 = _mm512_load_ps(arr + i10); // 10
+        const __m512 v11 = _mm512_load_ps(arr + i11); // 11
 
-        v = _mm512_load_ps(arr + i01); // 01
-        prod_cos = _mm512_mul_ps(real_cos_factor, v);
-        prod_isin = Util::productImagS(v, _mm512_set1_ps(-isin));
-        _mm512_store_ps(arr + i01, _mm512_add_ps(prod_cos, prod_isin));
+        const __m512 prod_cos00 = _mm512_mul_ps(real_cos_factor, v00);
+        const __m512 prod_isin00 = isin_prod.product(v00);
 
-        v = _mm512_load_ps(arr + i10); // 10
-        prod_cos = _mm512_mul_ps(real_cos_factor, v);
-        prod_isin = Util::productImagS(v, _mm512_set1_ps(-isin));
-        _mm512_store_ps(arr + i10, _mm512_add_ps(prod_cos, prod_isin));
+        const __m512 prod_cos01 = _mm512_mul_ps(real_cos_factor, v01);
+        const __m512 prod_isin01 = minus_isin_prod.product(v01);
 
-        v = _mm512_load_ps(arr + i11); // 11
-        prod_cos = _mm512_mul_ps(real_cos_factor, v);
-        prod_isin = Util::productImagS(v, _mm512_set1_ps(isin));
-        _mm512_store_ps(arr + i11, _mm512_add_ps(prod_cos, prod_isin));
+        const __m512 prod_cos10 = _mm512_mul_ps(real_cos_factor, v10);
+        const __m512 prod_isin10 = minus_isin_prod.product(v10);
+
+        const __m512 prod_cos11 = _mm512_mul_ps(real_cos_factor, v11);
+        const __m512 prod_isin11 = isin_prod.product(v11);
+
+        _mm512_store_ps(arr + i00, _mm512_add_ps(prod_cos00, prod_isin00));
+        _mm512_store_ps(arr + i01, _mm512_add_ps(prod_cos01, prod_isin01));
+        _mm512_store_ps(arr + i10, _mm512_add_ps(prod_cos10, prod_isin10));
+        _mm512_store_ps(arr + i11, _mm512_add_ps(prod_cos11, prod_isin11));
+
     }
 }
 
@@ -204,7 +210,7 @@ void applyIsingZZDoubleInternalInternal(std::complex<double> *arr,
         __m512d prod_sin = _mm512_mul_pd(coeffs, imag_sin_parity);
 
         __m512d prod =
-            _mm512_add_pd(prod_cos, _mm512_permutex_pd(prod_sin, 0B10110001));
+            _mm512_add_pd(prod_cos, _mm512_permute_pd(prod_sin, 0B01010101));
         _mm512_store_pd(arr + n, prod);
     }
 }
@@ -243,13 +249,13 @@ applyIsingZZDoubleInternalExternal(std::complex<double> *arr, size_t num_qubits,
         __m512d prod_sin0 = _mm512_mul_pd(v0, imag_sin_parity0);
 
         __m512d prod0 =
-            _mm512_add_pd(prod_cos0, _mm512_permutex_pd(prod_sin0, 0B10110001));
+            _mm512_add_pd(prod_cos0, _mm512_permute_pd(prod_sin0, 0B01010101));
 
         __m512d prod_cos1 = _mm512_mul_pd(real_cos_factor, v1);
         __m512d prod_sin1 = _mm512_mul_pd(v1, imag_sin_parity1);
 
         __m512d prod1 =
-            _mm512_add_pd(prod_cos1, _mm512_permutex_pd(prod_sin1, 0B10110001));
+            _mm512_add_pd(prod_cos1, _mm512_permute_pd(prod_sin1, 0B01010101));
 
         _mm512_store_pd(arr + i0, prod0);
         _mm512_store_pd(arr + i1, prod1);
@@ -276,6 +282,9 @@ static void applyIsingZZDoubleExternalExternal(std::complex<double> *arr,
     const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
     const __m512d real_cos_factor = _mm512_set1_pd(std::cos(angle / 2));
 
+    const auto isin_prod = Util::ProdPureImag<double>(isin);
+    const auto minus_isin_prod = Util::ProdPureImag<double>(-isin);
+
     for (size_t k = 0; k < exp2(num_qubits - 2);
          k += step_for_complex_precision<double>) {
         const size_t i00 = ((k << 2U) & parity_high) |
@@ -290,20 +299,16 @@ static void applyIsingZZDoubleExternalExternal(std::complex<double> *arr,
         const __m512d v11 = _mm512_load_pd(arr + i11); // 11
 
         const __m512d prod_cos00 = _mm512_mul_pd(real_cos_factor, v00);
-        const __m512d prod_isin00 =
-            Util::productImagD(v00, _mm512_set1_pd(isin));
+        const __m512d prod_isin00 = isin_prod.product(v00);
 
         const __m512d prod_cos01 = _mm512_mul_pd(real_cos_factor, v01);
-        const __m512d prod_isin01 =
-            Util::productImagD(v01, _mm512_set1_pd(-isin));
+        const __m512d prod_isin01 = minus_isin_prod.product(v01);
 
         const __m512d prod_cos10 = _mm512_mul_pd(real_cos_factor, v10);
-        const __m512d prod_isin10 =
-            Util::productImagD(v10, _mm512_set1_pd(-isin));
+        const __m512d prod_isin10 = minus_isin_prod.product(v10);
 
         const __m512d prod_cos11 = _mm512_mul_pd(real_cos_factor, v11);
-        const __m512d prod_isin11 =
-            Util::productImagD(v11, _mm512_set1_pd(isin));
+        const __m512d prod_isin11 = isin_prod.product(v11);
 
         _mm512_store_pd(arr + i00, _mm512_add_pd(prod_cos00, prod_isin00));
         _mm512_store_pd(arr + i01, _mm512_add_pd(prod_cos01, prod_isin01));

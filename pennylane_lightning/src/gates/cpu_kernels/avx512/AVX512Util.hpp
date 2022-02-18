@@ -25,7 +25,11 @@
 
 namespace Pennylane::Gates::AVX512::Util {
 
-template <class PrecisionT> struct AVX512Intrinsic;
+template <class PrecisionT>
+struct AVX512Intrinsic {
+    static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>,
+            "Data type for AVX512 must be float or double");
+};
 
 template <> struct AVX512Intrinsic<float> { using Type = __m512; };
 
@@ -33,6 +37,20 @@ template <> struct AVX512Intrinsic<double> { using Type = __m512d; };
 
 template <class PrecisionT>
 using AVX512IntrinsicType = typename AVX512Intrinsic<PrecisionT>::Type;
+
+inline
+AVX512IntrinsicType<float> load(const float* p) {
+    return _mm512_load_ps(p);
+}
+inline
+AVX512IntrinsicType<float> load(const std::complex<float>* p) {
+    return _mm512_load_ps(p);
+}
+
+inline void store(std::complex<float>* p,
+                  AVX512IntrinsicType<float> value) {
+    _mm512_store_ps(p, value);
+}
 
 template <typename T> struct ImagFactor {
     static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>,
@@ -89,7 +107,7 @@ inline __m512 productImagS(__m512 val) {
  */
 inline __m512d productImagD(__m512d val, __m512d factor) {
     __m512d prod_shuffled =
-        _mm512_permutex_pd(_mm512_mul_pd(val, factor), 0B10110001);
+        _mm512_permute_pd(_mm512_mul_pd(val, factor), 0B01'01'01'01);
     return _mm512_mul_pd(prod_shuffled,
                          _mm512_load_pd(&ImagFactor<double>::value));
 }
@@ -102,10 +120,62 @@ inline __m512d productImagD(__m512d val, __m512d factor) {
  * @param imag_val Value to product. We product 1j*imag_val to val.
  */
 inline __m512d productImagD(__m512d val) {
-    __m512d prod_shuffled = _mm512_permutex_pd(val, 0B10110001);
+    __m512d prod_shuffled = _mm512_permute_pd(val, 0B01'01'01'01);
     return _mm512_mul_pd(prod_shuffled,
                          _mm512_load_pd(&ImagFactor<double>::value));
 }
+
+
+/**
+ * @brief Simple class for easing product between complex values
+ * packed in AVX512 datatype and a pure imaginary value
+ */
+template<typename T>
+struct ProdPureImag;
+
+template <>
+struct ProdPureImag<float> {
+    __m512 factor_;
+
+    explicit ProdPureImag(float value) {
+        factor_ = _mm512_setr4_ps(-value, value, -value, value);
+    }
+
+    ProdPureImag(float value1, float value2) {
+        // clang-format off
+        factor_ = _mm512_setr_ps(-value1, value1, -value1, value1,
+                                 -value1, value1, -value1, value1,
+                                 -value2, value2, -value2, value2,
+                                 -value2, value2, -value2, value2);
+        // clang-format on
+    }
+
+    [[nodiscard]] inline auto product(__m512 val) const -> __m512 {
+        const auto prod_shuffled = _mm512_permute_ps(val, 0B10'11'00'01);
+        return _mm512_mul_ps(prod_shuffled, factor_);
+    }
+};
+
+template <>
+struct ProdPureImag<double> {
+    __m512d factor_;
+
+    explicit ProdPureImag(double value) {
+        factor_ = _mm512_setr4_pd(-value, value, -value, value);
+    }
+
+    ProdPureImag(double value1, double value2) {
+        // clang-format off
+        factor_ = _mm512_setr_pd(-value1, value1, -value1, value1,
+                                 -value1, value1, -value1, value1);
+        // clang-format on
+    }
+
+    [[nodiscard]] inline auto product(__m512d val) const -> __m512d {
+        const auto prod_shuffled = _mm512_permute_pd(val, 0B01'01'01'01);
+        return _mm512_mul_pd(prod_shuffled, factor_);
+    }
+};
 
 } // namespace Pennylane::Gates::AVX512::Util
 

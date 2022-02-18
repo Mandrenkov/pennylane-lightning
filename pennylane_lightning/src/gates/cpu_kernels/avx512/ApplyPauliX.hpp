@@ -69,8 +69,9 @@ inline void applyPauliXFloatExternal(std::complex<float> *arr,
 
 template <size_t rev_wire> inline void applyPauliXDoubleInternalOp(__m512d &v) {
     if constexpr (rev_wire == 0) {
-        const auto shuffle_idx = _mm512_set_epi64(5, 4, 7, 6, 1, 0, 3, 2);
-        v = _mm512_permutexvar_pd(shuffle_idx, v);
+        //const auto shuffle_idx = _mm512_set_epi64(5, 4, 7, 6, 1, 0, 3, 2);
+        // 1, 0, 3, 2
+        v = _mm512_permutex_pd(v, 0B01'00'11'10);
     } else if (rev_wire == 1) {
         const auto shuffle_idx = _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4);
         v = _mm512_permutexvar_pd(shuffle_idx, v);
