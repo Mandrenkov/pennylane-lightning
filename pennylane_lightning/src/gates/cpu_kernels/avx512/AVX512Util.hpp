@@ -107,16 +107,60 @@ inline __m512d productImagD(__m512d val) {
                          _mm512_load_pd(&ImagFactor<double>::value));
 }
 
-
 } // namespace Pennylane::Gates::AVX512::Util
 
 namespace Pennylane::Gates::AVX512 {
 template <typename T>
-[[maybe_unused]] constexpr static size_t step_for_complex_precision = 64 / sizeof(T) / 2;
+[[maybe_unused]] constexpr size_t step_for_complex_precision = 64 / sizeof(T) /
+                                                               2;
 
 // function aliases
-[[maybe_unused]] constexpr auto& fillLeadingOnes = Pennylane::Util::fillLeadingOnes;
-[[maybe_unused]] constexpr auto& fillTrailingOnes = Pennylane::Util::fillTrailingOnes;
-[[maybe_unused]] constexpr auto& exp2 = Pennylane::Util::exp2;
+[[maybe_unused]] constexpr static auto &fillLeadingOnes =
+    Pennylane::Util::fillLeadingOnes;
+[[maybe_unused]] constexpr static auto &fillTrailingOnes =
+    Pennylane::Util::fillTrailingOnes;
+[[maybe_unused]] constexpr static auto &exp2 = Pennylane::Util::exp2;
 
 } // namespace Pennylane::Gates::AVX512
+
+/// @cond DEV
+namespace Pennylane::Gates::AVX512::Internal {
+inline __m512 paritySInternal(size_t rev_wire) {
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return _mm512_setr_ps(1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, -1.0F, -1.0F);
+    case 1:
+        return _mm512_setr_ps(1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F, -1.0F, -1.0F, -1.0F,
+                              1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F,- 1.0F, -1.0F, -1.0F);
+    case 2:
+        return _mm512_setr_ps(1.0F, 1.0F, 1.0F, 1.0F,
+                              1.0F, 1.0F, 1.0F, 1.0F,
+                              -1.0F, -1.0F, -1.0F, -1.0F,
+                              -1.0F,- 1.0F, -1.0F, -1.0F);
+    }
+    // clang-format on
+    PL_UNREACHABLE;
+    return _mm512_setzero();
+}
+inline __m512d parityDInternal(size_t rev_wire) {
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return _mm512_setr_pd(1.0L, 1.0L, -1.0L, -1.0L,
+                              1.0L, 1.0L, -1.0L, -1.0L);
+    case 1:
+        return _mm512_setr_pd(1.0L, 1.0L, 1.0L, 1.0L,
+                              -1.0L, -1.0L, -1.0L, -1.0L);
+    }
+    // clang-format on
+    PL_UNREACHABLE;
+    return _mm512_setzero_pd();
+}
+} // namespace Pennylane::Gates::AVX512::Internal
+/// @endcond

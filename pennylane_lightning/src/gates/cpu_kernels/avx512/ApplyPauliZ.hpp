@@ -26,9 +26,9 @@
 
 namespace Pennylane::Gates::AVX512 {
 /// @cond DEV
-void applyPauliZFloatInternal(std::complex<float> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire) {
+inline void applyPauliZFloatInternal(std::complex<float> *arr,
+                                     const size_t num_qubits,
+                                     const size_t rev_wire) {
     __m512 factor;
     // clang-format off
     switch (rev_wire) {
@@ -54,20 +54,20 @@ void applyPauliZFloatInternal(std::complex<float> *arr,
         PL_UNREACHABLE;
     }
     // clang-format on
-    for (size_t k = 0; k < (1U << num_qubits); k += 8) {
+    for (size_t k = 0; k < exp2(num_qubits);
+         k += step_for_complex_precision<float>) {
         __m512 v = _mm512_load_ps(arr + k);
         v = _mm512_mul_ps(v, factor);
         _mm512_store_ps(arr + k, v);
     }
 }
-
-void applyPauliZFloatExternal(std::complex<float> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire) {
+inline void applyPauliZFloatExternal(std::complex<float> *arr,
+                                     const size_t num_qubits,
+                                     const size_t rev_wire) {
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
-    for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+    for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<float>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
         const size_t i1 = i0 | rev_wire_shift;
@@ -78,23 +78,23 @@ void applyPauliZFloatExternal(std::complex<float> *arr,
     }
 }
 
-void applyPauliZDoubleInternal(std::complex<double> *arr,
-                               const size_t num_qubits,
-                               const size_t rev_wire) {
+inline void applyPauliZDoubleInternal(std::complex<double> *arr,
+                                      const size_t num_qubits,
+                                      const size_t rev_wire) {
     __m512d factor;
     switch (rev_wire) {
     case 0:
-        factor = _mm512_setr_pd(1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F,
-                                -1.0F);
+        factor =
+            _mm512_setr_pd(1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F);
         break;
     case 1:
-        factor = _mm512_setr_pd(1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F,
-                                -1.0F);
+        factor =
+            _mm512_setr_pd(1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F);
         break;
     default:
         PL_UNREACHABLE;
     }
-    for (size_t k = 0; k < (1U << num_qubits);
+    for (size_t k = 0; k < exp2(num_qubits);
          k += step_for_complex_precision<double>) {
         __m512d v = _mm512_load_pd(arr + k);
         v = _mm512_mul_pd(v, factor);
@@ -102,13 +102,13 @@ void applyPauliZDoubleInternal(std::complex<double> *arr,
     }
 }
 
-void applyPauliZDoubleExternal(std::complex<double> *arr,
-                               const size_t num_qubits,
-                               const size_t rev_wire) {
+inline void applyPauliZDoubleExternal(std::complex<double> *arr,
+                                      const size_t num_qubits,
+                                      const size_t rev_wire) {
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
-    for (size_t k = 0; k < Util::exp2(num_qubits - 1);
+    for (size_t k = 0; k < exp2(num_qubits - 1);
          k += step_for_complex_precision<double>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
         const size_t i1 = i0 | rev_wire_shift;

@@ -26,10 +26,9 @@
 
 namespace Pennylane::Gates::AVX512 {
 /// @cond DEV
-template<int rev_wire>
-void applySFloatInternal(std::complex<float> *arr,
-                                const size_t num_qubits,
-                                bool inverse) {
+template <int rev_wire>
+void applySFloatInternal(std::complex<float> *arr, const size_t num_qubits,
+                         bool inverse) {
     __m512 factor;
     // clang-format off
     if constexpr (rev_wire == 0) {
@@ -54,37 +53,31 @@ void applySFloatInternal(std::complex<float> *arr,
         factor = _mm512_mul_ps(factor, _mm512_set1_ps(-1.0F));
     }
     for (size_t k = 0; k < (1U << num_qubits);
-            k += step_for_complex_precision<float>) {
+         k += step_for_complex_precision<float>) {
         __m512 v = _mm512_load_ps(arr + k);
         if constexpr (rev_wire == 0) {
             v = _mm512_permute_ps(v, 0B10'11'01'00);
             v = _mm512_mul_ps(v, factor);
         } else if (rev_wire == 1) {
-            v = _mm512_permutexvar_ps(
-                    _mm512_set_epi32(14,15,12,13,
-                                     11,10,9,8,
-                                     6,7,4,5,
-                                     3,2,1,0),
-                v);
+            v = _mm512_permutexvar_ps(_mm512_set_epi32(14, 15, 12, 13, 11, 10,
+                                                       9, 8, 6, 7, 4, 5, 3, 2,
+                                                       1, 0),
+                                      v);
             v = _mm512_mul_ps(v, factor);
         } else { // rev_wire == 2
-            v = _mm512_permutexvar_ps(
-                    _mm512_set_epi32(
-                        14,15,12,13,
-                        10,11,8,9,
-                        7,6,5,4,
-                        3, 2, 1, 0),
-                v);
+            v = _mm512_permutexvar_ps(_mm512_set_epi32(14, 15, 12, 13, 10, 11,
+                                                       8, 9, 7, 6, 5, 4, 3, 2,
+                                                       1, 0),
+                                      v);
             v = _mm512_mul_ps(v, factor);
         }
         _mm512_store_ps(arr + k, v);
     }
 }
 
-void applySFloatExternal(std::complex<float> *arr,
-                                     const size_t num_qubits,
-                                     const size_t rev_wire,
-                                     bool inverse) {
+inline void applySFloatExternal(std::complex<float> *arr,
+                                const size_t num_qubits, const size_t rev_wire,
+                                bool inverse) {
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
@@ -105,10 +98,9 @@ void applySFloatExternal(std::complex<float> *arr,
     }
 }
 
-template<size_t rev_wire>
-void applySDoubleInternal(std::complex<double> *arr,
-                                 const size_t num_qubits,
-                                 bool inverse) {
+template <size_t rev_wire>
+void applySDoubleInternal(std::complex<double> *arr, const size_t num_qubits,
+                          bool inverse) {
     __m512d factor;
     // clang-format off
     if constexpr (rev_wire == 0) {
@@ -142,6 +134,7 @@ void applySDoubleInternal(std::complex<double> *arr,
     }
 }
 
+inline
 void applySDoubleExternal(std::complex<double> *arr,
                                       const size_t num_qubits,
                                       const size_t rev_wire,

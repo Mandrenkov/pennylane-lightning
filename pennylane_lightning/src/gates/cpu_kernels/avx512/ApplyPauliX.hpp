@@ -26,23 +26,22 @@
 
 namespace Pennylane::Gates::AVX512 {
 /// @cond DEV
-template <size_t rev_wire>
-inline void applyPauliXFloatInternalOp(__m512 &v) {
+template <size_t rev_wire> inline void applyPauliXFloatInternalOp(__m512 &v) {
     if constexpr (rev_wire == 0) {
         v = _mm512_permute_ps(v, 0B01001110);
     } else if (rev_wire == 1) {
-        const auto shuffle_idx = _mm512_set_epi32(
-            11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0, 7, 6, 5, 4);
+        const auto shuffle_idx = _mm512_set_epi32(11, 10, 9, 8, 15, 14, 13, 12,
+                                                  3, 2, 1, 0, 7, 6, 5, 4);
         v = _mm512_permutexvar_ps(shuffle_idx, v);
     } else if (rev_wire == 2) {
-        const auto shuffle_idx = _mm512_set_epi32(
-            7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10, 9, 8);
+        const auto shuffle_idx = _mm512_set_epi32(7, 6, 5, 4, 3, 2, 1, 0, 15,
+                                                  14, 13, 12, 11, 10, 9, 8);
         v = _mm512_permutexvar_ps(shuffle_idx, v);
     }
 }
 template <size_t rev_wire>
 void applyPauliXFloatInternal(std::complex<float> *arr,
-                                     const size_t num_qubits) {
+                              const size_t num_qubits) {
     for (size_t k = 0; k < (1U << num_qubits);
          k += step_for_complex_precision<float>) {
         __m512 v = _mm512_load_ps(arr + k);
@@ -50,8 +49,7 @@ void applyPauliXFloatInternal(std::complex<float> *arr,
         _mm512_store_ps(arr + k, v);
     }
 }
-
-void applyPauliXFloatExternal(std::complex<float> *arr,
+inline void applyPauliXFloatExternal(std::complex<float> *arr,
                                      const size_t num_qubits,
                                      const size_t rev_wire) {
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
@@ -69,8 +67,7 @@ void applyPauliXFloatExternal(std::complex<float> *arr,
     }
 }
 
-template <size_t rev_wire>
-inline static void applyPauliXDoubleInternalOp(__m512d &v) {
+template <size_t rev_wire> inline void applyPauliXDoubleInternalOp(__m512d &v) {
     if constexpr (rev_wire == 0) {
         const auto shuffle_idx = _mm512_set_epi64(5, 4, 7, 6, 1, 0, 3, 2);
         v = _mm512_permutexvar_pd(shuffle_idx, v);
@@ -81,8 +78,8 @@ inline static void applyPauliXDoubleInternalOp(__m512d &v) {
 }
 
 template <size_t rev_wire>
-static void applyPauliXDoubleInternal(std::complex<double> *arr,
-                                      const size_t num_qubits) {
+void applyPauliXDoubleInternal(std::complex<double> *arr,
+                               const size_t num_qubits) {
     for (size_t k = 0; k < (1U << num_qubits);
          k += step_for_complex_precision<double>) {
         __m512d v = _mm512_load_pd(arr + k);
@@ -90,10 +87,9 @@ static void applyPauliXDoubleInternal(std::complex<double> *arr,
         _mm512_store_pd(arr + k, v);
     }
 }
-
-void applyPauliXDoubleExternal(std::complex<double> *arr,
-                               const size_t num_qubits,
-                               const size_t rev_wire) {
+inline void applyPauliXDoubleExternal(std::complex<double> *arr,
+                                      const size_t num_qubits,
+                                      const size_t rev_wire) {
     const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
     const size_t wire_parity = fillTrailingOnes(rev_wire);
     const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);

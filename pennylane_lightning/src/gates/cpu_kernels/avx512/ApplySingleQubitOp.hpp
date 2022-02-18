@@ -28,9 +28,9 @@ namespace Pennylane::Gates::AVX512 {
 /// @cond DEV
 template <size_t rev_wire>
 void applySingleQubitOpInternal(std::complex<float> *arr,
-                                       const size_t num_qubits,
-                                       const std::complex<float> *matrix,
-                                       bool inverse = false) {
+                                const size_t num_qubits,
+                                const std::complex<float> *matrix,
+                                bool inverse = false) {
     __m512 diag_real;
     __m512 diag_imag;
     __m512 offdiag_real;
@@ -44,13 +44,11 @@ void applySingleQubitOpInternal(std::complex<float> *arr,
             diag_imag = _mm512_setr4_ps(-imag(matrix[0]), -imag(matrix[0]),
                                         -imag(matrix[3]), -imag(matrix[3]));
 
-            offdiag_real =
-                _mm512_setr4_ps(real(matrix[2]), real(matrix[2]),
-                                real(matrix[1]), real(matrix[1]));
+            offdiag_real = _mm512_setr4_ps(real(matrix[2]), real(matrix[2]),
+                                           real(matrix[1]), real(matrix[1]));
 
-            offdiag_imag =
-                _mm512_setr4_ps(-imag(matrix[2]), -imag(matrix[2]),
-                                -imag(matrix[1]), -imag(matrix[1]));
+            offdiag_imag = _mm512_setr4_ps(-imag(matrix[2]), -imag(matrix[2]),
+                                           -imag(matrix[1]), -imag(matrix[1]));
 
         } else {
             diag_real = _mm512_setr4_ps(real(matrix[0]), real(matrix[0]),
@@ -59,13 +57,11 @@ void applySingleQubitOpInternal(std::complex<float> *arr,
             diag_imag = _mm512_setr4_ps(imag(matrix[0]), imag(matrix[0]),
                                         imag(matrix[3]), imag(matrix[3]));
 
-            offdiag_real =
-                _mm512_setr4_ps(real(matrix[1]), real(matrix[1]),
-                                real(matrix[2]), real(matrix[2]));
+            offdiag_real = _mm512_setr4_ps(real(matrix[1]), real(matrix[1]),
+                                           real(matrix[2]), real(matrix[2]));
 
-            offdiag_imag =
-                _mm512_setr4_ps(imag(matrix[1]), imag(matrix[1]),
-                                imag(matrix[2]), imag(matrix[2]));
+            offdiag_imag = _mm512_setr4_ps(imag(matrix[1]), imag(matrix[1]),
+                                           imag(matrix[2]), imag(matrix[2]));
         }
     } else if (rev_wire == 1) {
         // clang-format off
@@ -242,7 +238,7 @@ void applySingleQubitOpInternal(std::complex<float> *arr,
             __m512 w_offdiag = _mm512_add_ps(
                 _mm512_mul_ps(v_off, offdiag_real),
                 Util::productImagS(v_off,
-                                       offdiag_imag)); // can optimize more?
+                                   offdiag_imag)); // can optimize more?
 
             v = _mm512_add_ps(w_diag, w_offdiag);
         } else if (rev_wire == 1) {
@@ -251,14 +247,14 @@ void applySingleQubitOpInternal(std::complex<float> *arr,
                 Util::productImagS(v, diag_imag)); // can optimize more?
 
             __m512 v_off = _mm512_permutexvar_ps(
-                _mm512_set_epi32(11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0,
-                                 7, 6, 5, 4),
+                _mm512_set_epi32(11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0, 7, 6,
+                                 5, 4),
                 v);
 
             __m512 w_offdiag = _mm512_add_ps(
                 _mm512_mul_ps(v_off, offdiag_real),
                 Util::productImagS(v_off,
-                                       offdiag_imag)); // can optimize more?
+                                   offdiag_imag)); // can optimize more?
 
             v = _mm512_add_ps(w_diag, w_offdiag);
         } else { // rev_wire == 2
@@ -267,21 +263,22 @@ void applySingleQubitOpInternal(std::complex<float> *arr,
                 Util::productImagS(v, diag_imag)); // can optimize more?
 
             __m512 v_off = _mm512_permutexvar_ps(
-                _mm512_set_epi32(7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11,
-                                 10, 9, 8),
+                _mm512_set_epi32(7, 6, 5, 4, 3, 2, 1, 0, 15, 14, 13, 12, 11, 10,
+                                 9, 8),
                 v);
 
             __m512 w_offdiag = _mm512_add_ps(
                 _mm512_mul_ps(v_off, offdiag_real),
                 Util::productImagS(v_off,
-                                       offdiag_imag)); // can optimize more?
+                                   offdiag_imag)); // can optimize more?
 
             v = _mm512_add_ps(w_diag, w_offdiag);
         }
         _mm512_store_ps(arr + k, v);
     }
 }
-void applySingleQubitOpExternal(std::complex<float> *arr,
+
+inline void applySingleQubitOpExternal(std::complex<float> *arr,
                                        const size_t num_qubits,
                                        const size_t rev_wire,
                                        const std::complex<float> *matrix,
@@ -307,7 +304,8 @@ void applySingleQubitOpExternal(std::complex<float> *arr,
         u11 = matrix[3];
     }
 
-    for (size_t k = 0; k < exp2(num_qubits - 1); k += step_for_complex_precision<float>) {
+    for (size_t k = 0; k < exp2(num_qubits - 1);
+         k += step_for_complex_precision<float>) {
         const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
         const size_t i1 = i0 | rev_wire_shift;
 
@@ -316,23 +314,21 @@ void applySingleQubitOpExternal(std::complex<float> *arr,
 
         // w0 = u00 * v0
         __m512 w0_real = _mm512_mul_ps(v0, _mm512_set1_ps(real(u00)));
-        __m512 w0_imag =
-            Util::productImagS(v0, _mm512_set1_ps(imag(u00)));
+        __m512 w0_imag = Util::productImagS(v0, _mm512_set1_ps(imag(u00)));
 
         // w0 +=  u01 * v1
-        w0_real = _mm512_add_ps(
-            w0_real, _mm512_mul_ps(v1, _mm512_set1_ps(real(u01))));
+        w0_real = _mm512_add_ps(w0_real,
+                                _mm512_mul_ps(v1, _mm512_set1_ps(real(u01))));
         w0_imag = _mm512_add_ps(
             w0_imag, Util::productImagS(v1, _mm512_set1_ps(imag(u01))));
 
         // w1 = u11 * v1
         __m512 w1_real = _mm512_mul_ps(v1, _mm512_set1_ps(real(u11)));
-        __m512 w1_imag =
-            Util::productImagS(v1, _mm512_set1_ps(imag(u11)));
+        __m512 w1_imag = Util::productImagS(v1, _mm512_set1_ps(imag(u11)));
 
         // w1 +=  u10 * v0
-        w1_real = _mm512_add_ps(
-            w1_real, _mm512_mul_ps(v0, _mm512_set1_ps(real(u10))));
+        w1_real = _mm512_add_ps(w1_real,
+                                _mm512_mul_ps(v0, _mm512_set1_ps(real(u10))));
         w1_imag = _mm512_add_ps(
             w1_imag, Util::productImagS(v0, _mm512_set1_ps(imag(u10))));
 
@@ -359,13 +355,11 @@ static void applySingleQubitOpInternal(std::complex<double> *arr,
             diag_imag = _mm512_setr4_pd(-imag(matrix[0]), -imag(matrix[0]),
                                         -imag(matrix[3]), -imag(matrix[3]));
 
-            offdiag_real =
-                _mm512_setr4_pd(real(matrix[2]), real(matrix[2]),
-                                real(matrix[1]), real(matrix[1]));
+            offdiag_real = _mm512_setr4_pd(real(matrix[2]), real(matrix[2]),
+                                           real(matrix[1]), real(matrix[1]));
 
-            offdiag_imag =
-                _mm512_setr4_pd(-imag(matrix[2]), -imag(matrix[2]),
-                                -imag(matrix[1]), -imag(matrix[1]));
+            offdiag_imag = _mm512_setr4_pd(-imag(matrix[2]), -imag(matrix[2]),
+                                           -imag(matrix[1]), -imag(matrix[1]));
 
         } else {
             diag_real = _mm512_setr4_pd(real(matrix[0]), real(matrix[0]),
@@ -374,13 +368,11 @@ static void applySingleQubitOpInternal(std::complex<double> *arr,
             diag_imag = _mm512_setr4_pd(imag(matrix[0]), imag(matrix[0]),
                                         imag(matrix[3]), imag(matrix[3]));
 
-            offdiag_real =
-                _mm512_setr4_pd(real(matrix[1]), real(matrix[1]),
-                                real(matrix[2]), real(matrix[2]));
+            offdiag_real = _mm512_setr4_pd(real(matrix[1]), real(matrix[1]),
+                                           real(matrix[2]), real(matrix[2]));
 
-            offdiag_imag =
-                _mm512_setr4_pd(imag(matrix[1]), imag(matrix[1]),
-                                imag(matrix[2]), imag(matrix[2]));
+            offdiag_imag = _mm512_setr4_pd(imag(matrix[1]), imag(matrix[1]),
+                                           imag(matrix[2]), imag(matrix[2]));
         }
     } else { // rev_wire == 1
         // clang-format off
@@ -449,29 +441,29 @@ static void applySingleQubitOpInternal(std::complex<double> *arr,
             __m512d w_offdiag = _mm512_add_pd(
                 _mm512_mul_pd(v_off, offdiag_real),
                 Util::productImagD(v_off,
-                                       offdiag_imag)); // can optimize more?
+                                   offdiag_imag)); // can optimize more?
 
             v = _mm512_add_pd(w_diag, w_offdiag);
-        } else {// rev_wire == 1
+        } else { // rev_wire == 1
             __m512d w_diag = _mm512_add_pd(
                 _mm512_mul_pd(v, diag_real),
                 Util::productImagD(v, diag_imag)); // can optimize more?
 
             __m512d v_off = _mm512_permutexvar_pd(
-                _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4),
-                v);
+                _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4), v);
 
             __m512d w_offdiag = _mm512_add_pd(
                 _mm512_mul_pd(v_off, offdiag_real),
                 Util::productImagD(v_off,
-                                       offdiag_imag)); // can optimize more?
+                                   offdiag_imag)); // can optimize more?
 
             v = _mm512_add_pd(w_diag, w_offdiag);
         }
         _mm512_store_pd(arr + k, v);
     }
 }
-void applySingleQubitOpExternal(std::complex<double> *arr,
+
+inline void applySingleQubitOpExternal(std::complex<double> *arr,
                                        const size_t num_qubits,
                                        const size_t rev_wire,
                                        const std::complex<double> *matrix,
@@ -507,23 +499,21 @@ void applySingleQubitOpExternal(std::complex<double> *arr,
 
         // w0 = u00 * v0
         __m512d w0_real = _mm512_mul_pd(v0, _mm512_set1_pd(real(u00)));
-        __m512d w0_imag =
-            Util::productImagD(v0, _mm512_set1_pd(imag(u00)));
+        __m512d w0_imag = Util::productImagD(v0, _mm512_set1_pd(imag(u00)));
 
         // w0 +=  u01 * v1
-        w0_real = _mm512_add_pd(
-            w0_real, _mm512_mul_pd(v1, _mm512_set1_pd(real(u01))));
+        w0_real = _mm512_add_pd(w0_real,
+                                _mm512_mul_pd(v1, _mm512_set1_pd(real(u01))));
         w0_imag = _mm512_add_pd(
             w0_imag, Util::productImagD(v1, _mm512_set1_pd(imag(u01))));
 
         // w1 = u11 * v1
         __m512d w1_real = _mm512_mul_pd(v1, _mm512_set1_pd(real(u11)));
-        __m512d w1_imag =
-            Util::productImagD(v1, _mm512_set1_pd(imag(u11)));
+        __m512d w1_imag = Util::productImagD(v1, _mm512_set1_pd(imag(u11)));
 
         // w1 +=  u10 * v0
-        w1_real = _mm512_add_pd(
-            w1_real, _mm512_mul_pd(v0, _mm512_set1_pd(real(u10))));
+        w1_real = _mm512_add_pd(w1_real,
+                                _mm512_mul_pd(v0, _mm512_set1_pd(real(u10))));
         w1_imag = _mm512_add_pd(
             w1_imag, Util::productImagD(v0, _mm512_set1_pd(imag(u10))));
 
