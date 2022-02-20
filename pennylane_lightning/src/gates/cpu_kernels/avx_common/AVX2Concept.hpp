@@ -63,6 +63,7 @@ struct ImagProd {
 
     explicit ImagProd(IntrinsicType<PrecisionT>&& val) : factor_{std::move(val)} {
     }
+
     ImagProd& operator*=(PrecisionT val) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             factor_ = _mm256_mul_ps(factor_, _mm256_set1_ps(val));
@@ -80,29 +81,27 @@ struct ImagProd {
         return *this;
     }
     
-    static auto repeat2(PrecisionT value0, PrecisionT value1) {
-        ImagProd<PrecisionT> obj;
+    static auto repeat2(PrecisionT value0, PrecisionT value1) 
+        -> ImagProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
-            obj.factor_ = _mm256_setr_ps(-value0, value0, -value1, value1,
-                                         -value0, value0, -value1, value1);
+            return ImagProd<PrecisionT>
+                    {_mm256_setr_ps(-value0, value0, -value1, value1,
+                                    -value0, value0, -value1, value1)};
             // clang-format on
         } else {
-            // clang-format off
-            obj.factor_ = _mm256_setr_pd(-value0, value0, -value1, value1);
-            // clang-format on
+            return ImagProd<PrecisionT>
+                    {_mm256_setr_pd(-value0, value0, -value1, value1)};
         }
-        return obj;
     }
 
     template<typename T = PrecisionT,
              std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
-    static auto repeat4(float value0, float value1) {
+    static auto repeat4(float value0, float value1) -> ImagProd<float> {
         // clang-format off
-        ImagProd<float> obj;
-        obj.factor_ = _mm256_setr_ps(-value0, value0, -value0, value0,
-                                     -value1, value1, -value1, value1);
-        return obj;
+        return ImagProd<float>{
+            _mm256_setr_ps(-value0, value0, -value0, value0,
+                           -value1, value1, -value1, value1)};
         // clang-format on
     }
 
@@ -160,29 +159,28 @@ struct RealProd {
         return *this;
     }
     
-    static auto repeat2(PrecisionT value0, PrecisionT value1) {
-        RealProd<PrecisionT> obj;
+    static auto repeat2(PrecisionT value0, PrecisionT value1)
+        -> RealProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
-            obj.factor_ = _mm256_setr_ps(value0, value0, value1, value1,
-                                         value0, value0, value1, value1);
+            return RealProd<PrecisionT>
+                    {_mm256_setr_ps(value0, value0, value1, value1,
+                                    value0, value0, value1, value1)};
             // clang-format on
-        } else {
-            obj.factor_ = _mm256_setr_pd(value0, value0, value1, value1);
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm256_setr_pd(value0, value0, value1, value1)};
         }
-        return obj;
     }
 
 
     template<typename T = PrecisionT,
              std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
-    static auto repeat4(PrecisionT value0, PrecisionT value1) {
+    static auto repeat4(PrecisionT value0, PrecisionT value1) -> RealProd<float> {
         // clang-format off
-        RealProd<float> obj;
-        obj.factor_ = _mm256_setr_ps(value0, value0, value0, value0,
-                                     value1, value1, value1, value1);
+        return RealProd<float>{_mm256_setr_ps(value0, value0, value0, value0,
+                                              value1, value1, value1, value1)};
 
-        return obj;
         // clang-format on
     }
 
@@ -194,7 +192,6 @@ struct RealProd {
         }
     }
 };
-
 
 inline __m256 paritySInternal(size_t rev_wire) {
     // clang-format off
@@ -215,9 +212,9 @@ inline __m256d parityDInternal(size_t rev_wire) {
     // clang-format off
     switch(rev_wire) {
     case 0:
-        return _mm256_setr_pd(1.0L, 1.0L, -1.0L, -1.0L);
+        return _mm256_setr_pd(1.0, 1.0, -1.0, -1.0);
     case 1:
-        return _mm256_setr_pd(1.0L, 1.0L, 1.0L, 1.0L);
+        return _mm256_setr_pd(1.0, 1.0, 1.0, 1.0);
     default:
         PL_UNREACHABLE;
     }
@@ -304,7 +301,7 @@ struct AVX2Concept {
             } else {// rev_wire == 1
                 return _mm256_permutevar8x32_ps(
                     v,
-                    _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4));
+                    _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4)); // NOLINT(readability-magic-numbers)
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             return _mm256_permute4x64_pd(v, 0B01'00'11'10);

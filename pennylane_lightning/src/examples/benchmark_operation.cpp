@@ -154,7 +154,7 @@ double benchmark_generator(RandomEngine &re, KernelType kernel,
  */
 int main(int argc, char *argv[]) {
     // Handle input
-    if (argc < 5) {
+    if (argc < 5) { // NOLINT(readability-magic-numbers)
         std::cerr << "Wrong number of inputs. User provided " << argc - 1
                   << " inputs. \n"
                   << "Usage: " + std::string(argv[0]) +

@@ -25,7 +25,6 @@
 
 #if PL_USE_OMP
 #include "cpu_kernels/GateImplementationsParallelLM.hpp"
-#include "cpu_kernels/GateImplementationsParallelPI.hpp"
 #endif
 
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
@@ -51,7 +50,6 @@ using AvailableKernels =
     Util::TypeList<Gates::GateImplementationsLM, Gates::GateImplementationsPI,
 #if PL_USE_OMP
                    Gates::GateImplementationsParallelLM,
-                   Gates::GateImplementationsParallelPI,
 #endif
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
                    Gates::GateImplementationsAVX512,

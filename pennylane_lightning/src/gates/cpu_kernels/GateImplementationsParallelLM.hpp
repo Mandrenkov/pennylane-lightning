@@ -116,16 +116,19 @@ class GateImplementationsParallelLM
             return;
         }
 
+        constexpr static size_t stepsize = 8;
+
         const size_t rev_wire = num_qubits - wire - 1;
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
         if (inverse) {
-#pragma omp parallel for
-            for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += 8) {
+#pragma omp parallel for default(none) \
+            firstprivate(wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
+            for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += stepsize) {
                 PL_UNROLL_LOOP
-                for (size_t idx = 0; idx < 8; idx++) {
+                for (size_t idx = 0; idx < stepsize; idx++) {
                     const size_t k = n + idx;
                     const size_t i0 =
                         ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -141,10 +144,11 @@ class GateImplementationsParallelLM
                 }
             }
         } else {
-#pragma omp parallel for
-            for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += 8) {
+#pragma omp parallel for default(none) \
+            firstprivate(wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
+            for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += stepsize) {
                 PL_UNROLL_LOOP
-                for (size_t idx = 0; idx < 8; idx++) {
+                for (size_t idx = 0; idx < stepsize; idx++) {
                     const size_t k = n + idx;
                     const size_t i0 =
                         ((k << 1U) & wire_parity_inv) | (wire_parity & k);
@@ -175,11 +179,14 @@ class GateImplementationsParallelLM
     applyTwoQubitOp(std::complex<PrecisionT> *arr, size_t num_qubits,
                     const std::complex<PrecisionT> *matrix,
                     const std::vector<size_t> &wires, bool inverse = false) {
-        if (num_qubits < 5) {
+        if (num_qubits < 5) { // NOLINT(readability-magic-numbers)
             GateImplementationsLM::applyTwoQubitOp(arr, num_qubits, matrix,
                                                    wires, inverse);
             return;
         }
+
+        constexpr static size_t stepsize = 8;
+
         const size_t rev_wire0 = num_qubits - wires[1] - 1;
         const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
 
@@ -195,10 +202,12 @@ class GateImplementationsParallelLM
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
         if (inverse) {
-#pragma omp parallel for
-            for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += 8) {
+#pragma omp parallel for default(none) \
+            firstprivate(parity_high, parity_middle, parity_low, \
+                    rev_wire0_shift, rev_wire1_shift, arr, num_qubits, matrix)
+            for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += stepsize) {
                 PL_UNROLL_LOOP
-                for (size_t idx = 0; idx < 8; idx++) {
+                for (size_t idx = 0; idx < stepsize; idx++) {
                     const size_t k = n + idx;
                     const size_t i00 = ((k << 2U) & parity_high) |
                                        ((k << 1U) & parity_middle) |
@@ -247,10 +256,12 @@ class GateImplementationsParallelLM
                 }
             }
         } else {
-#pragma omp parallel for
-            for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += 8) {
+#pragma omp parallel for default(none) \
+            firstprivate(parity_high, parity_middle, parity_low, \
+                    rev_wire0_shift, rev_wire1_shift, arr, num_qubits, matrix)
+            for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += stepsize) {
                 PL_UNROLL_LOOP
-                for (size_t idx = 0; idx < 8; idx++) {
+                for (size_t idx = 0; idx < stepsize; idx++) {
                     const size_t k = n + idx;
                     const size_t i00 = ((k << 2U) & parity_high) |
                                        ((k << 1U) & parity_middle) |

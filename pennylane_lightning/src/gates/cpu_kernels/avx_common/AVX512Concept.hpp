@@ -81,37 +81,38 @@ struct ImagProd {
         return *this;
     }
     
-    static auto repeat2(PrecisionT value0, PrecisionT value1) {
-        ImagProd<PrecisionT> obj;
+    static auto repeat2(PrecisionT value0, PrecisionT value1) 
+        -> ImagProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
-            obj.factor_ = _mm512_setr_ps(-value0, value0, -value1, value1,
+            return ImagProd<PrecisionT>{
+                          _mm512_setr_ps(-value0, value0, -value1, value1,
                                          -value0, value0, -value1, value1,
                                          -value0, value0, -value1, value1,
-                                         -value0, value0, -value1, value1);
+                                         -value0, value0, -value1, value1)};
             // clang-format on
         } else {
             // clang-format off
-            obj.factor_ = _mm512_setr_pd(-value0, value0, -value1, value1,
-                                         -value0, value0, -value1, value1);
+            return ImagProd<PrecisionT>{
+                          _mm512_setr_pd(-value0, value0, -value1, value1,
+                                         -value0, value0, -value1, value1)};
             // clang-format on
         }
-        return obj;
     }
 
     static auto repeat4(PrecisionT value0, PrecisionT value1) {
         // clang-format off
-        ImagProd<PrecisionT> obj;
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            obj.factor_ = _mm512_setr_ps(-value0, value0, -value0, value0,
+            return ImagProd<PrecisionT>{
+                          _mm512_setr_ps(-value0, value0, -value0, value0,
                                          -value1, value1, -value1, value1,
                                          -value0, value0, -value0, value0,
-                                         -value1, value1, -value1, value1);
+                                         -value1, value1, -value1, value1)};
         } else {
-            obj.factor_ = _mm512_setr_pd(-value0, value0, -value0, value0,
-                                         -value1, value1, -value1, value1);
+            return ImagProd<PrecisionT>{
+                          _mm512_setr_pd(-value0, value0, -value0, value0,
+                                         -value1, value1, -value1, value1)};
         }
-        return obj;
         // clang-format on
     }
 
@@ -119,11 +120,11 @@ struct ImagProd {
              std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
     static auto repeat8(float value0, float value1) {
         // clang-format off
-        ImagProd<float> obj;
-        obj.factor_ = _mm512_setr_ps(-value0, value0, -value0, value0,
-                                     -value0, value0, -value0, value0,
-                                     -value1, value1, -value1, value1,
-                                     -value1, value1, -value1, value1);
+        ImagProd<float> obj{
+            _mm512_setr_ps(-value0, value0, -value0, value0,
+                           -value0, value0, -value0, value0,
+                           -value1, value1, -value1, value1,
+                           -value1, value1, -value1, value1)};
         return obj;
         // clang-format on
     }
@@ -184,34 +185,34 @@ struct RealProd {
     }
 
     static auto repeat2(PrecisionT value0, PrecisionT value1) {
-        RealProd<PrecisionT> obj;
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
-            obj.factor_ = _mm512_setr_ps(value0, value0, value1, value1,
-                                         value0, value0, value1, value1,
-                                         value0, value0, value1, value1,
-                                         value0, value0, value1, value1);
+            return RealProd<PrecisionT>{
+                _mm512_setr_ps(value0, value0, value1, value1,
+                               value0, value0, value1, value1,
+                               value0, value0, value1, value1,
+                               value0, value0, value1, value1)};
             // clang-format on
         } else {
-            obj.factor_ = _mm512_setr_pd(value0, value0, value1, value1,
-                                         value0, value0, value1, value1);
+            return RealProd<PrecisionT>{
+                          _mm512_setr_pd(value0, value0, value1, value1,
+                                         value0, value0, value1, value1)};
         }
-        return obj;
     }
 
     static auto repeat4(PrecisionT value0, PrecisionT value1) {
         // clang-format off
-        RealProd<PrecisionT> obj;
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            obj.factor_ = _mm512_setr_ps(value0, value0, value0, value0,
+            return RealProd<PrecisionT>{
+                          _mm512_setr_ps(value0, value0, value0, value0,
                                          value1, value1, value1, value1,
                                          value0, value0, value0, value0,
-                                         value1, value1, value1, value1);
+                                         value1, value1, value1, value1)};
         } else {
-            obj.factor_ = _mm512_setr_pd(value0, value0, value0, value0,
-                                         value1, value1, value1, value1);
+            return RealProd<PrecisionT>{
+                          _mm512_setr_pd(value0, value0, value0, value0,
+                                         value1, value1, value1, value1)};
         }
-        return obj;
         // clang-format on
     }
 
@@ -219,12 +220,11 @@ struct RealProd {
              std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
     static auto repeat8(float value0, float value1) {
         // clang-format off
-        RealProd<float> obj;
-        obj.factor_ = _mm512_setr_ps(value0, value0, value0, value0,
-                                     value0, value0, value0, value0,
-                                     value1, value1, value1, value1,
-                                     value1, value1, value1, value1);
-        return obj;
+        return RealProd<float> {
+            _mm512_setr_ps(value0, value0, value0, value0,
+                           value0, value0, value0, value0,
+                           value1, value1, value1, value1,
+                           value1, value1, value1, value1)};
         // clang-format on
     }
 
@@ -266,11 +266,11 @@ inline __m512d parityDInternal(size_t rev_wire) {
     // clang-format off
     switch(rev_wire) {
     case 0:
-        return _mm512_setr_pd(1.0L, 1.0L, -1.0L, -1.0L,
-                              1.0L, 1.0L, -1.0L, -1.0L);
+        return _mm512_setr_pd(1.0, 1.0, -1.0, -1.0,
+                              1.0, 1.0, -1.0, -1.0);
     case 1:
-        return _mm512_setr_pd(1.0L, 1.0L, 1.0L, 1.0L,
-                              -1.0L, -1.0L, -1.0L, -1.0L);
+        return _mm512_setr_pd(1.0, 1.0, 1.0, 1.0,
+                              -1.0, -1.0, -1.0, -1.0);
     default:
         PL_UNREACHABLE;
     }
@@ -347,6 +347,7 @@ struct AVX512Concept {
             static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
         }
     }
+
     
     template<size_t rev_wire>
     static auto internalSwap(IntrinsicType v) {
@@ -356,21 +357,29 @@ struct AVX512Concept {
                 return _mm512_permute_ps(v, 0B01'00'11'10);
             } else if (rev_wire == 1) {
                 return _mm512_permutexvar_ps(
-                    _mm512_set_epi32(11, 10, 9, 8, 15, 14, 13, 12,
-                                     3, 2, 1, 0, 7, 6, 5, 4),
-                    v);
+                    // NOLINTNEXTLINE(readability-magic-numbers)
+                    _mm512_set_epi32(11, 10,  9,  8,
+                    // NOLINTNEXTLINE(readability-magic-numbers)
+                                     15, 14, 13, 12,
+                    // NOLINTNEXTLINE(readability-magic-numbers)
+                                      3,  2,  1,  0,
+                    // NOLINTNEXTLINE(readability-magic-numbers)
+                                      7,  6,  5,  4), v);
+                // NOLINT(readability-magic-numbers)
             } else { // rev_wire == 2
                 return _mm512_permutexvar_ps(
-                    _mm512_set_epi32(7, 6, 5, 4, 3, 2, 1, 0,
+                    // NOLINTNEXTLINE(readability-magic-numbers)
+                    _mm512_set_epi32( 7,  6,  5,  4,  3,  2, 1, 0,
+                    // NOLINTNEXTLINE(readability-magic-numbers)
                                      15, 14, 13, 12, 11, 10, 9, 8),
-                    v);
+                    v); 
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             if constexpr(rev_wire == 0) {
                 return _mm512_permutex_pd(v, 0B01'00'11'10);
             } else { // rev_wire == 1
                 return _mm512_permutexvar_pd(
-                    _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4), v);
+                    _mm512_set_epi64(3, 2, 1, 0, 7, 6, 5, 4), v); // NOLINT(readability-magic-numbers)
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);

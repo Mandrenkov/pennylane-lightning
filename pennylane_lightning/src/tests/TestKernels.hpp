@@ -11,7 +11,6 @@
 #include "cpu_kernels/GateImplementationsPI.hpp"
 #if PL_USE_OMP
 #include "cpu_kernels/GateImplementationsParallelLM.hpp"
-#include "cpu_kernels/GateImplementationsParallelPI.hpp"
 #endif
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
 #include "cpu_kernels/GateImplementationsAVX512.hpp"
@@ -22,7 +21,6 @@ using TestKernels =
                               Pennylane::Gates::GateImplementationsPI,
 #if PL_USE_OMP
                               Pennylane::Gates::GateImplementationsParallelLM,
-                              Pennylane::Gates::GateImplementationsParallelPI,
 #endif
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
                               Pennylane::Gates::GateImplementationsAVX512,

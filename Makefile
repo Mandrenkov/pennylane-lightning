@@ -124,5 +124,5 @@ endif
 .PHONY: check-tidy
 check-tidy:
 	rm -rf ./Build
-	cmake . -BBuild -DENABLE_CLANG_TIDY=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON
+	cmake . -BBuild -DENABLE_CLANG_TIDY=ON -DBUILD_TESTS=ON -DBUILD_EXAMPLES=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512=ON
 	cmake --build ./Build

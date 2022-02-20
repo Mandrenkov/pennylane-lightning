@@ -45,69 +45,69 @@ struct SingleQubitOpProdCreate {
 
 template<typename PrecisionT, template <typename> class AVXConcept>
 struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 0> {
-    static SingleQubitOpProd<PrecisionT, AVXConcept> create(bool inverse, const std::complex<PrecisionT>* matrix) {
+    static auto create(bool inverse, const std::complex<PrecisionT>* matrix)
+        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
         using RealProd = typename AVXConcept<PrecisionT>::RealProd;
         using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
 
-        SingleQubitOpProd<PrecisionT, AVXConcept> res;
         // rev_wire == 0
         if (inverse) {
-            res.diag_real = RealProd::repeat2(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat2(-imag(matrix[0]), -imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat2(real(matrix[2]), real(matrix[1]));
-            res.offdiag_imag = ImagProd::repeat2(-imag(matrix[2]), -imag(matrix[1]));
-        } else {
-            res.diag_real = RealProd::repeat2(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat2(imag(matrix[0]), imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat2(real(matrix[1]), real(matrix[2]));
-            res.offdiag_imag = ImagProd::repeat2(imag(matrix[1]), imag(matrix[2]));
-        }
-        return res;
+            return {
+                RealProd::repeat2(real(matrix[0]), real(matrix[3])),
+                ImagProd::repeat2(-imag(matrix[0]), -imag(matrix[3])),
+                RealProd::repeat2(real(matrix[2]), real(matrix[1])),
+                ImagProd::repeat2(-imag(matrix[2]), -imag(matrix[1]))};
+        } // else 
+        return {
+            RealProd::repeat2(real(matrix[0]), real(matrix[3])),
+            ImagProd::repeat2(imag(matrix[0]), imag(matrix[3])),
+            RealProd::repeat2(real(matrix[1]), real(matrix[2])),
+            ImagProd::repeat2(imag(matrix[1]), imag(matrix[2]))};
     }
 };
 template<typename PrecisionT, template <typename> class AVXConcept>
 struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 1> {
-    static SingleQubitOpProd<PrecisionT, AVXConcept> create(bool inverse, const std::complex<PrecisionT>* matrix) {
+    static auto create(bool inverse, const std::complex<PrecisionT>* matrix)
+        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
         using RealProd = typename AVXConcept<PrecisionT>::RealProd;
         using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
 
-        SingleQubitOpProd<PrecisionT, AVXConcept> res;
         // rev_wire == 1
         if (inverse) {
-            res.diag_real = RealProd::repeat4(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat4(-imag(matrix[0]), -imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat4(real(matrix[2]), real(matrix[1]));
-            res.offdiag_imag = ImagProd::repeat4(-imag(matrix[2]), -imag(matrix[1]));
-        } else {
-            res.diag_real = RealProd::repeat4(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat4(imag(matrix[0]), imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat4(real(matrix[1]), real(matrix[2]));
-            res.offdiag_imag = ImagProd::repeat4(imag(matrix[1]), imag(matrix[2]));
-        }
-        return res;
+            return {
+                RealProd::repeat4(real(matrix[0]), real(matrix[3])),
+                ImagProd::repeat4(-imag(matrix[0]), -imag(matrix[3])),
+                RealProd::repeat4(real(matrix[2]), real(matrix[1])),
+                ImagProd::repeat4(-imag(matrix[2]), -imag(matrix[1]))};
+        } // else
+        return {
+            RealProd::repeat4(real(matrix[0]), real(matrix[3])),
+            ImagProd::repeat4(imag(matrix[0]), imag(matrix[3])),
+            RealProd::repeat4(real(matrix[1]), real(matrix[2])),
+            ImagProd::repeat4(imag(matrix[1]), imag(matrix[2]))};
     }
 };
 
 template<typename PrecisionT, template <typename> class AVXConcept>
 struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 2> {
-    static SingleQubitOpProd<PrecisionT, AVXConcept> create(bool inverse, const std::complex<PrecisionT>* matrix) {
+    static auto create(bool inverse, const std::complex<PrecisionT>* matrix)
+        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
         using RealProd = typename AVXConcept<PrecisionT>::RealProd;
         using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
 
-        SingleQubitOpProd<PrecisionT, AVXConcept> res;
         // rev_wire == 2
         if (inverse) {
-            res.diag_real = RealProd::repeat8(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat8(-imag(matrix[0]), -imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat8(real(matrix[2]), real(matrix[1]));
-            res.offdiag_imag = ImagProd::repeat8(-imag(matrix[2]), -imag(matrix[1]));
-        } else {
-            res.diag_real = RealProd::repeat8(real(matrix[0]), real(matrix[3]));
-            res.diag_imag = ImagProd::repeat8(imag(matrix[0]), imag(matrix[3]));
-            res.offdiag_real = RealProd::repeat8(real(matrix[1]), real(matrix[2]));
-            res.offdiag_imag = ImagProd::repeat8(imag(matrix[1]), imag(matrix[2]));
-        }
-        return res;
+            return {
+                RealProd::repeat8(real(matrix[0]), real(matrix[3])),
+                ImagProd::repeat8(-imag(matrix[0]), -imag(matrix[3])),
+                RealProd::repeat8(real(matrix[2]), real(matrix[1])),
+                ImagProd::repeat8(-imag(matrix[2]), -imag(matrix[1]))};
+        } // else
+        return {
+            RealProd::repeat8(real(matrix[0]), real(matrix[3])),
+            ImagProd::repeat8(imag(matrix[0]), imag(matrix[3])),
+            RealProd::repeat8(real(matrix[1]), real(matrix[2])),
+            ImagProd::repeat8(imag(matrix[1]), imag(matrix[2]))};
     }
 };
 
