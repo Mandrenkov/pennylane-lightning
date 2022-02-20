@@ -16,7 +16,7 @@
  * Defines applySingleQubitOp for AVX
  */
 #pragma once
-#include "AVX512Util.hpp"
+#include "AVXUtil.hpp"
 #include "BitUtil.hpp"
 #include "Util.hpp"
 
@@ -24,7 +24,7 @@
 
 #include <complex>
 
-namespace Pennylane::Gates::AVX512 {
+namespace Pennylane::Gates::AVX {
 
 template<typename PrecisionT, template <typename> class AVXConcept>
 struct SingleQubitOpProd {
@@ -186,7 +186,7 @@ struct ApplySingleQubitOp {
         const auto u11_imag_prod = ImagProd(imag(u11));
 
         for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += step_for_complex_precision<PrecisionT>) {
+             k += PrecisionAVXConcept::step_for_complex_precision) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
@@ -215,4 +215,4 @@ struct ApplySingleQubitOp {
     }
 };
 /// @endcond
-} // namespace Pennylane::Gates::AVX512
+} // namespace Pennylane::Gates::AVX

@@ -19,8 +19,17 @@
 
 #if defined(__GNUC__) || defined(__clang__)
 #define PL_UNREACHABLE __builtin_unreachable()
-#else
+#elif defined(_MSC_VER)
 #define PL_UNREACHABLE __assume(false)
+#else // Unsupported compiler
+#define PL_UNREACHABLE 
+#endif
+
+#if defined(__AVX2__)
+#define PL_USE_AVX2 1
+[[maybe_unused]] static constexpr bool use_avx2 = true;
+#else
+[[maybe_unused]] static constexpr bool use_avx2 = false;
 #endif
 
 #if defined(__AVX512F__)
@@ -59,4 +68,13 @@
 #define PL_UNROLL_LOOP _Pragma("unroll(8)")
 #else
 #define PL_UNROLL_LOOP
+#endif
+
+// Define force inline
+#if defined(__GNUC__) || defined (__clang__)
+#define PL_FORCE_INLINE __attribute__((always_inline))
+#elif defined(_MSC_VER)
+#define PL_FORCE_INLINE __forceinline
+#else
+#define PL_FORCE_INLINE inline
 #endif

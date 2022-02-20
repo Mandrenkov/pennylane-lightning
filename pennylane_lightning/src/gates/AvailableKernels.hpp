@@ -31,6 +31,10 @@
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
 #include "cpu_kernels/GateImplementationsAVX512.hpp"
 #endif
+
+#if PL_USE_AVX2
+#include "cpu_kernels/GateImplementationsAVX2.hpp"
+#endif
 #include "TypeList.hpp"
 
 namespace Pennylane {
@@ -51,6 +55,9 @@ using AvailableKernels =
 #endif
 #if PL_USE_AVX512F && PL_USE_AVX512DQ
                    Gates::GateImplementationsAVX512,
+#endif
+#if PL_USE_AVX2
+                   Gates::GateImplementationsAVX2,
 #endif
                    void>;
 } // namespace Pennylane

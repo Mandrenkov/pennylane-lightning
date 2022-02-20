@@ -171,6 +171,18 @@ inline auto log2PerfectPower(unsigned long val) -> size_t {
 #endif
 ///@}
 
+constexpr auto constLog2PerfectPower(size_t value) -> size_t {
+    if (value == 0) {
+        return 0; // not well defined
+    }
+    size_t n = 0;
+    while ((value & 1U) == 0U) {
+        value >>= 1U;
+        ++n;
+    }
+    return n;
+}
+
 /**
  * @brief Check if there is a positive integer n such that value == 2^n.
  *

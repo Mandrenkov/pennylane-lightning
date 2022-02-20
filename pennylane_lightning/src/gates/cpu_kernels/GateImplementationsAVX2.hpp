@@ -13,22 +13,22 @@
 // limitations under the License.
 /**
  * @file
- * Defines kernel functions with AVX512F and AVX512DQ
+ * Defines kernel functions with AVX2
  */
 #pragma once
-/*
-#include "avx512/ApplyCZ.hpp"
-#include "avx512/ApplyHadamard.hpp"
-#include "avx512/ApplyIsingZZ.hpp"
-#include "avx512/ApplyPauliX.hpp"
-#include "avx512/ApplyPauliY.hpp"
-#include "avx512/ApplyPauliZ.hpp"
-#include "avx512/ApplyRZ.hpp"
-#include "avx512/ApplyS.hpp"
-*/
+
+// General implementations
+#include "avx_common/AVX2Concept.hpp"
 #include "avx_common/ApplySingleQubitOp.hpp"
 #include "avx_common/ApplyIsingZZ.hpp"
-#include "avx_common/AVX512Concept.hpp"
+/*
+#include "avx2/ApplyHadamard.hpp"
+#include "avx2/ApplyPauliX.hpp"
+#include "avx2/ApplyPauliY.hpp"
+#include "avx2/ApplyPauliZ.hpp"
+#include "avx2/ApplyRZ.hpp"
+#include "avx2/ApplyS.hpp"
+*/
 
 #include "BitUtil.hpp"
 #include "Error.hpp"
@@ -46,15 +46,15 @@
 
 namespace Pennylane::Gates {
 
-class GateImplementationsAVX512 {
+class GateImplementationsAVX2 {
   private:
     template <typename T>
-    using AVXConcept = AVX::AVX512Concept<T>;
+    using AVXConcept = AVX::AVX2Concept<T>;
 
   public:
-    constexpr static KernelType kernel_id = KernelType::AVX512;
-    constexpr static std::string_view name = "AVX512";
-    constexpr static uint32_t data_alignment_in_bytes = 64;
+    constexpr static KernelType kernel_id = KernelType::AVX2;
+    constexpr static std::string_view name = "AVX2";
+    constexpr static uint32_t data_alignment_in_bytes = 32;
 
     constexpr static std::array implemented_gates = {
         /*
@@ -65,7 +65,9 @@ class GateImplementationsAVX512 {
         GateOperation::S,
         */
         /* T, RX, RY, PhaseShift, SWAP, IsingXX, IsingYY */
-        //GateOperation::RZ,
+        /*
+        GateOperation::RZ,
+        */
         GateOperation::Rot,
         /*
         GateOperation::CZ,
@@ -76,6 +78,7 @@ class GateImplementationsAVX512 {
     constexpr static std::array<GeneratorOperation, 0> implemented_generators =
         {};
 
+  private:
   public:
     template <typename PrecisionT>
     static void applySingleQubitOp(std::complex<PrecisionT> *arr,
@@ -84,7 +87,7 @@ class GateImplementationsAVX512 {
                                    const size_t wire, bool inverse = false) {
         const size_t rev_wire = num_qubits - wire - 1;
 
-        using SingleQubitOpProdAVX512 = AVX::ApplySingleQubitOp<PrecisionT, AVXConcept>;
+        using SingleQubitOpProdAVX2 = AVX::ApplySingleQubitOp<PrecisionT, AVXConcept>;
 
         if (num_qubits < AVXConcept<PrecisionT>::internal_wires) {
             GateImplementationsLM::applySingleQubitOp(arr, num_qubits, matrix,
@@ -95,39 +98,29 @@ class GateImplementationsAVX512 {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             switch (rev_wire) {
             case 0:
-                SingleQubitOpProdAVX512::template applyInternal<0>(arr, num_qubits,
+                SingleQubitOpProdAVX2::template applyInternal<0>(arr, num_qubits,
                                                                    matrix, inverse);
                 return;
             case 1:
-                SingleQubitOpProdAVX512::template applyInternal<1>(arr, num_qubits, matrix,
-                                                      inverse);
-                return;
-            case 2:
-                SingleQubitOpProdAVX512::template applyInternal<2>(arr, num_qubits, matrix,
+                SingleQubitOpProdAVX2::template applyInternal<1>(arr, num_qubits, matrix,
                                                       inverse);
                 return;
             default:
-                SingleQubitOpProdAVX512::applyExternal(arr, num_qubits, rev_wire,
+                SingleQubitOpProdAVX2::applyExternal(arr, num_qubits, rev_wire,
                                                        matrix, inverse);
                 return;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
-            switch (rev_wire) {
-            case 0:
-                SingleQubitOpProdAVX512::template applyInternal<0>(arr, num_qubits,
+            if (rev_wire == 0) {
+                SingleQubitOpProdAVX2::template applyInternal<0>(arr, num_qubits,
                         matrix, inverse);
-                return;
-            case 1:
-                SingleQubitOpProdAVX512::template applyInternal<1>(arr, num_qubits, matrix,
-                                                      inverse);
-                return;
-            default:
-                SingleQubitOpProdAVX512::applyExternal(arr, num_qubits, rev_wire,
+            } else {
+                SingleQubitOpProdAVX2::applyExternal(arr, num_qubits, rev_wire,
                                                        matrix, inverse);
-                return;
             }
         }
     }
+
     /*
     template <class PrecisionT>
     static void applyPauliX(std::complex<PrecisionT> *arr,
@@ -144,16 +137,13 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyPauliXFloatInternal<0>(arr, num_qubits);
+                AVX2::applyPauliXFloatInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX512::applyPauliXFloatInternal<1>(arr, num_qubits);
-                return;
-            case 2:
-                AVX512::applyPauliXFloatInternal<2>(arr, num_qubits);
+                AVX2::applyPauliXFloatInternal<1>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyPauliXFloatExternal(arr, num_qubits, rev_wire);
+                AVX2::applyPauliXFloatExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -166,13 +156,10 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyPauliXDoubleInternal<0>(arr, num_qubits);
-                return;
-            case 1:
-                AVX512::applyPauliXDoubleInternal<1>(arr, num_qubits);
+                AVX2::applyPauliXDoubleInternal<0>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyPauliXDoubleExternal(arr, num_qubits, rev_wire);
+                AVX2::applyPauliXDoubleExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else {
@@ -196,16 +183,13 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyPauliYFloatInternal<0>(arr, num_qubits);
+                AVX2::applyPauliYFloatInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX512::applyPauliYFloatInternal<1>(arr, num_qubits);
-                return;
-            case 2:
-                AVX512::applyPauliYFloatInternal<2>(arr, num_qubits);
+                AVX2::applyPauliYFloatInternal<1>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyPauliYFloatExternal(arr, num_qubits, rev_wire);
+                AVX2::applyPauliYFloatExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -218,13 +202,10 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyPauliYDoubleInternal<0>(arr, num_qubits);
-                return;
-            case 1:
-                AVX512::applyPauliYDoubleInternal<1>(arr, num_qubits);
+                AVX2::applyPauliYDoubleInternal(arr, num_qubits);
                 return;
             default:
-                AVX512::applyPauliYDoubleExternal(arr, num_qubits, rev_wire);
+                AVX2::applyPauliYDoubleExternal(arr, num_qubits, rev_wire);
                 return;
             }
         } else {
@@ -246,25 +227,20 @@ class GateImplementationsAVX512 {
             }
             const size_t rev_wire = num_qubits - wires[0] - 1;
 
-            if (rev_wire < 3) {
-                AVX512::applyPauliZFloatInternal(arr, num_qubits, rev_wire);
+            if (rev_wire < 2) {
+                AVX2::applyPauliZFloatInternal(arr, num_qubits, rev_wire);
                 return;
             }
-            AVX512::applyPauliZFloatExternal(arr, num_qubits, rev_wire);
+            AVX2::applyPauliZFloatExternal(arr, num_qubits, rev_wire);
             return;
         } else if (std::is_same_v<PrecisionT, double>) {
-            if (num_qubits < 2) {
-                GateImplementationsLM::applyPauliZ(arr, num_qubits, wires,
-                                                   inverse);
-                return;
-            }
             const size_t rev_wire = num_qubits - wires[0] - 1;
 
-            if (rev_wire < 2) {
-                AVX512::applyPauliZDoubleInternal(arr, num_qubits, rev_wire);
+            if (rev_wire == 0) {
+                AVX2::applyPauliZDoubleInternal(arr, num_qubits);
                 return;
             }
-            AVX512::applyPauliZDoubleExternal(arr, num_qubits, rev_wire);
+            AVX2::applyPauliZDoubleExternal(arr, num_qubits, rev_wire);
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
                           std::is_same_v<PrecisionT, double>);
@@ -276,27 +252,6 @@ class GateImplementationsAVX512 {
                        const std::vector<size_t> &wires,
                        [[maybe_unused]] bool inverse) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            if (num_qubits < 3) {
-                GateImplementationsLM::applyS(arr, num_qubits, wires, inverse);
-                return;
-            }
-            const size_t rev_wire = num_qubits - wires[0] - 1;
-
-            switch (rev_wire) {
-            case 0:
-                AVX512::applySFloatInternal<0>(arr, num_qubits, inverse);
-                return;
-            case 1:
-                AVX512::applySFloatInternal<1>(arr, num_qubits, inverse);
-                return;
-            case 2:
-                AVX512::applySFloatInternal<2>(arr, num_qubits, inverse);
-                return;
-            default:
-                AVX512::applySFloatExternal(arr, num_qubits, rev_wire, inverse);
-                return;
-            }
-        } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyS(arr, num_qubits, wires, inverse);
                 return;
@@ -305,14 +260,23 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applySDoubleInternal<0>(arr, num_qubits, inverse);
+                AVX2::applySFloatInternal<0>(arr, num_qubits, inverse);
                 return;
             case 1:
-                AVX512::applySDoubleInternal<1>(arr, num_qubits, inverse);
+                AVX2::applySFloatInternal<1>(arr, num_qubits, inverse);
                 return;
             default:
-                AVX512::applySDoubleExternal(arr, num_qubits, rev_wire,
-                                             inverse);
+                AVX2::applySFloatExternal(arr, num_qubits, rev_wire, inverse);
+                return;
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+            switch (rev_wire) {
+            case 0:
+                AVX2::applySDoubleInternal(arr, num_qubits, inverse);
+                return;
+            default:
+                AVX2::applySDoubleExternal(arr, num_qubits, rev_wire, inverse);
                 return;
             }
         } else {
@@ -327,28 +291,6 @@ class GateImplementationsAVX512 {
                               const std::vector<size_t> &wires,
                               [[maybe_unused]] bool inverse) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            if (num_qubits < 3) {
-                GateImplementationsLM::applyHadamard(arr, num_qubits, wires,
-                                                     inverse);
-                return;
-            }
-            const size_t rev_wire = num_qubits - wires[0] - 1;
-
-            switch (rev_wire) {
-            case 0:
-                AVX512::applyHadamardFloatInternal<0>(arr, num_qubits);
-                return;
-            case 1:
-                AVX512::applyHadamardFloatInternal<1>(arr, num_qubits);
-                return;
-            case 2:
-                AVX512::applyHadamardFloatInternal<2>(arr, num_qubits);
-                return;
-            default:
-                AVX512::applyHadamardFloatExternal(arr, num_qubits, rev_wire);
-            }
-
-        } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyHadamard(arr, num_qubits, wires,
                                                      inverse);
@@ -358,13 +300,24 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyHadamardDoubleInternal<0>(arr, num_qubits);
+                AVX2::applyHadamardFloatInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX512::applyHadamardDoubleInternal<1>(arr, num_qubits);
+                AVX2::applyHadamardFloatInternal<1>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyHadamardDoubleExternal(arr, num_qubits, rev_wire);
+                AVX2::applyHadamardFloatExternal(arr, num_qubits, rev_wire);
+            }
+
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                AVX2::applyHadamardDoubleInternal(arr, num_qubits);
+                return;
+            default:
+                AVX2::applyHadamardDoubleExternal(arr, num_qubits, rev_wire);
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
@@ -379,22 +332,6 @@ class GateImplementationsAVX512 {
         assert(wires.size() == 1);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            if (num_qubits < 3) {
-                GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
-                                               angle);
-                return;
-            } // else
-            const size_t rev_wire = num_qubits - wires[0] - 1;
-
-            if (rev_wire < 3) {
-                AVX512::applyRZFloatInternal(arr, num_qubits, rev_wire, inverse,
-                                             angle);
-                return;
-            }
-            AVX512::applyRZFloatExternal(arr, num_qubits, rev_wire, inverse,
-                                         angle);
-            return;
-        } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyRZ(arr, num_qubits, wires, inverse,
                                                angle);
@@ -403,11 +340,21 @@ class GateImplementationsAVX512 {
             const size_t rev_wire = num_qubits - wires[0] - 1;
 
             if (rev_wire < 2) {
-                AVX512::applyRZDoubleInternal(arr, num_qubits, rev_wire,
-                                              inverse, angle);
+                AVX2::applyRZFloatInternal(arr, num_qubits, rev_wire, inverse,
+                                             angle);
                 return;
             }
-            AVX512::applyRZDoubleExternal(arr, num_qubits, rev_wire, inverse,
+            AVX2::applyRZFloatExternal(arr, num_qubits, rev_wire, inverse,
+                                         angle);
+            return;
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            if (rev_wire == 0) {
+                AVX2::applyRZDoubleInternal(arr, num_qubits, inverse, angle);
+                return;
+            }
+            AVX2::applyRZDoubleExternal(arr, num_qubits, rev_wire, inverse,
                                           angle);
             return;
         } else {
@@ -417,7 +364,6 @@ class GateImplementationsAVX512 {
         }
     }
     */
-
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRot(std::complex<PrecisionT> *arr, const size_t num_qubits,
                          const std::vector<size_t> &wires, bool inverse,
@@ -430,9 +376,8 @@ class GateImplementationsAVX512 {
 
         applySingleQubitOp(arr, num_qubits, rotMat.data(), wires[0]);
     }
-
     /* Two-qubit gates*/
-    /*
+        /*
     template <class PrecisionT>
     static void applyCZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
                         const std::vector<size_t> &wires,
@@ -440,38 +385,27 @@ class GateImplementationsAVX512 {
         assert(wires.size() == 2);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            if (num_qubits < 3) {
-                GateImplementationsLM::applyCZ(arr, num_qubits, wires, inverse);
-                return;
-            }
             const size_t rev_wire0 = num_qubits - wires[1] - 1;
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
-            if (rev_wire0 < 3 && rev_wire1 < 3) {
-                AVX512::applyCZFloatInternalInternal(arr, num_qubits, rev_wire0,
-                                                     rev_wire1);
-            } else if (std::min(rev_wire0, rev_wire1) < 3) {
-                AVX512::applyCZFloatInternalExternal(arr, num_qubits, rev_wire0,
+            if (rev_wire0 < 2 && rev_wire1 < 2) {
+                AVX2::applyCZFloatInternalInternal(arr, num_qubits);
+            } else if (std::min(rev_wire0, rev_wire1) < 2) {
+                AVX2::applyCZFloatInternalExternal(arr, num_qubits, rev_wire0,
                                                      rev_wire1);
             } else {
-                AVX512::applyCZFloatExternalExternal(arr, num_qubits, rev_wire0,
+                AVX2::applyCZFloatExternalExternal(arr, num_qubits, rev_wire0,
                                                      rev_wire1);
             }
         } else if (std::is_same_v<PrecisionT, double>) {
-            if (num_qubits < 2) {
-                GateImplementationsLM::applyCZ(arr, num_qubits, wires, inverse);
-                return;
-            }
             const size_t rev_wire0 = num_qubits - wires[1] - 1;
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
 
-            if (rev_wire0 < 2 && rev_wire1 < 2) {
-                AVX512::applyCZDoubleInternalInternal(arr, num_qubits,
-                                                      rev_wire0, rev_wire1);
-            } else if (std::min(rev_wire0, rev_wire1) < 2) {
-                AVX512::applyCZDoubleInternalExternal(arr, num_qubits,
-                                                      rev_wire0, rev_wire1);
+            if (std::min(rev_wire0, rev_wire1) == 0) {
+                AVX2::applyCZDoubleInternalExternal(
+                        arr, num_qubits,
+                        std::max(rev_wire0, rev_wire1));
             } else {
-                AVX512::applyCZDoubleExternalExternal(arr, num_qubits,
+                AVX2::applyCZDoubleExternalExternal(arr, num_qubits,
                                                       rev_wire0, rev_wire1);
             }
         } else {
@@ -488,27 +422,9 @@ class GateImplementationsAVX512 {
                              [[maybe_unused]] bool inverse, ParamT angle) {
         assert(wires.size() == 2);
 
-        using ApplyIsingZZAVX512 = AVX::ApplyIsingZZ<PrecisionT, AVXConcept>;
+        using ApplyIsingZZAVX2 = AVX::ApplyIsingZZ<PrecisionT, AVXConcept>;
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            if (num_qubits < 3) {
-                GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
-                                                    inverse, angle);
-                return;
-            }
-            const size_t rev_wire0 = num_qubits - wires[1] - 1;
-            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
-            if (rev_wire0 < 3 && rev_wire1 < 3) {
-                ApplyIsingZZAVX512::applyInternalInternal(
-                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-            } else if (std::min(rev_wire0, rev_wire1) < 3) {
-                ApplyIsingZZAVX512::applyInternalExternal(
-                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-            } else {
-                ApplyIsingZZAVX512::applyExternalExternal(
-                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
-            }
-        } else if (std::is_same_v<PrecisionT, double>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyIsingZZ(arr, num_qubits, wires,
                                                     inverse, angle);
@@ -516,15 +432,25 @@ class GateImplementationsAVX512 {
             }
             const size_t rev_wire0 = num_qubits - wires[1] - 1;
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
-
             if (rev_wire0 < 2 && rev_wire1 < 2) {
-                ApplyIsingZZAVX512::applyInternalInternal(
-                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+                ApplyIsingZZAVX2::applyInternalInternal(arr, num_qubits, 
+                        rev_wire0, rev_wire1, inverse, angle);
             } else if (std::min(rev_wire0, rev_wire1) < 2) {
-                ApplyIsingZZAVX512::applyInternalExternal(
+                ApplyIsingZZAVX2::applyInternalExternal(
                     arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
             } else {
-                ApplyIsingZZAVX512::applyExternalExternal(
+                ApplyIsingZZAVX2::applyExternalExternal(
+                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire0 = num_qubits - wires[1] - 1;
+            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+            if (std::min(rev_wire0, rev_wire1) == 0) {
+                ApplyIsingZZAVX2::applyInternalExternal(
+                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+            } else {
+                ApplyIsingZZAVX2::applyExternalExternal(
                     arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
             }
         } else {

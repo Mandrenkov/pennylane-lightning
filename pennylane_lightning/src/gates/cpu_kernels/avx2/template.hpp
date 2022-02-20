@@ -1,4 +1,4 @@
-// Copyright 2021 Xanadu Quantum Technologies Inc.
+// Copyright 2022 Xanadu Quantum Technologies Inc.
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 /**
- * @file KernelType.hpp
- * Defines possible kernel types as enum and define python export.
+ * @file
+ * Defines [] gate
  */
 #pragma once
-#include "Error.hpp"
+#include "AVX2Util.hpp"
+#include "BitUtil.hpp"
 #include "Util.hpp"
 
-#include <array>
+#include <immintrin.h>
 
-namespace Pennylane::Gates {
-/**
- * @brief Define kernel id for each implementation.
- */
-enum class KernelType { PI, LM, ParallelPI, ParallelLM, AVX2, AVX512, None };
-} // namespace Pennylane::Gates
+#include <complex>
 
-namespace Pennylane {
-/**
- * @brief List of kernels binds to Python.
+namespace Pennylane::Gates::AVX2 {
+/// @cond DEV
+
+/*
+ * Fill here
  */
-[[maybe_unused]] constexpr std::array kernels_to_pyexport = {
-    Gates::KernelType::PI, Gates::KernelType::LM};
-} // namespace Pennylane
+
+/// @endcond
+} // namespace Pennylane::Gates::AVX2
