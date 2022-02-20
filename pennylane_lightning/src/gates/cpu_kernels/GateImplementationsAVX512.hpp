@@ -26,6 +26,7 @@
 #include "avx512/ApplyRZ.hpp"
 #include "avx512/ApplyS.hpp"
 */
+#include "avx_common/ApplyHadamard.hpp"
 #include "avx_common/ApplySingleQubitOp.hpp"
 #include "avx_common/ApplyIsingZZ.hpp"
 #include "avx_common/AVX512Concept.hpp"
@@ -61,7 +62,9 @@ class GateImplementationsAVX512 {
         GateOperation::PauliX,
         GateOperation::PauliY,
         GateOperation::PauliZ,
+        */
         GateOperation::Hadamard,
+        /*
         GateOperation::S,
         */
         /* T, RX, RY, PhaseShift, SWAP, IsingXX, IsingYY */
@@ -320,12 +323,15 @@ class GateImplementationsAVX512 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
+    */
 
     template <class PrecisionT>
     static void applyHadamard(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
                               const std::vector<size_t> &wires,
                               [[maybe_unused]] bool inverse) {
+
+        using ApplyHadamardAVX512 = AVX::ApplyHadamard<PrecisionT, AVXConcept>;
         if constexpr (std::is_same_v<PrecisionT, float>) {
             if (num_qubits < 3) {
                 GateImplementationsLM::applyHadamard(arr, num_qubits, wires,
@@ -336,16 +342,16 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyHadamardFloatInternal<0>(arr, num_qubits);
+                ApplyHadamardAVX512::template applyInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX512::applyHadamardFloatInternal<1>(arr, num_qubits);
+                ApplyHadamardAVX512::template applyInternal<1>(arr, num_qubits);
                 return;
             case 2:
-                AVX512::applyHadamardFloatInternal<2>(arr, num_qubits);
+                ApplyHadamardAVX512::template applyInternal<2>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyHadamardFloatExternal(arr, num_qubits, rev_wire);
+                ApplyHadamardAVX512::applyExternal(arr, num_qubits, rev_wire);
             }
 
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -358,20 +364,20 @@ class GateImplementationsAVX512 {
 
             switch (rev_wire) {
             case 0:
-                AVX512::applyHadamardDoubleInternal<0>(arr, num_qubits);
+                ApplyHadamardAVX512::template applyInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX512::applyHadamardDoubleInternal<1>(arr, num_qubits);
+                ApplyHadamardAVX512::template applyInternal<1>(arr, num_qubits);
                 return;
             default:
-                AVX512::applyHadamardDoubleExternal(arr, num_qubits, rev_wire);
+                ApplyHadamardAVX512::applyExternal(arr, num_qubits, rev_wire);
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
                           std::is_same_v<PrecisionT, double>);
         }
     }
-
+    /*
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
                         const std::vector<size_t> &wires,

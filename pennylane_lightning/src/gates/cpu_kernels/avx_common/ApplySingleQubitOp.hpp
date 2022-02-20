@@ -95,6 +95,7 @@ struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 2> {
         using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
 
         SingleQubitOpProd<PrecisionT, AVXConcept> res;
+        // rev_wire == 2
         if (inverse) {
             res.diag_real = RealProd::repeat8(real(matrix[0]), real(matrix[3]));
             res.diag_imag = ImagProd::repeat8(-imag(matrix[0]), -imag(matrix[3]));

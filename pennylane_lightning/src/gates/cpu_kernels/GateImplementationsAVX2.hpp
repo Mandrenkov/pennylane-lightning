@@ -21,6 +21,7 @@
 #include "avx_common/AVX2Concept.hpp"
 #include "avx_common/ApplySingleQubitOp.hpp"
 #include "avx_common/ApplyIsingZZ.hpp"
+#include "avx_common/ApplyHadamard.hpp"
 /*
 #include "avx2/ApplyHadamard.hpp"
 #include "avx2/ApplyPauliX.hpp"
@@ -61,7 +62,9 @@ class GateImplementationsAVX2 {
         GateOperation::PauliX,
         GateOperation::PauliY,
         GateOperation::PauliZ,
+        */
         GateOperation::Hadamard,
+        /*
         GateOperation::S,
         */
         /* T, RX, RY, PhaseShift, SWAP, IsingXX, IsingYY */
@@ -284,12 +287,14 @@ class GateImplementationsAVX2 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
-
+    */
     template <class PrecisionT>
     static void applyHadamard(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
                               const std::vector<size_t> &wires,
                               [[maybe_unused]] bool inverse) {
+        using ApplyHadamardAVX2 = AVX::ApplyHadamard<PrecisionT, AVXConcept>;
+
         if constexpr (std::is_same_v<PrecisionT, float>) {
             if (num_qubits < 2) {
                 GateImplementationsLM::applyHadamard(arr, num_qubits, wires,
@@ -300,31 +305,28 @@ class GateImplementationsAVX2 {
 
             switch (rev_wire) {
             case 0:
-                AVX2::applyHadamardFloatInternal<0>(arr, num_qubits);
+                ApplyHadamardAVX2::template applyInternal<0>(arr, num_qubits);
                 return;
             case 1:
-                AVX2::applyHadamardFloatInternal<1>(arr, num_qubits);
+                ApplyHadamardAVX2::template applyInternal<1>(arr, num_qubits);
                 return;
             default:
-                AVX2::applyHadamardFloatExternal(arr, num_qubits, rev_wire);
+                ApplyHadamardAVX2::applyExternal(arr, num_qubits, rev_wire);
             }
 
         } else if (std::is_same_v<PrecisionT, double>) {
             const size_t rev_wire = num_qubits - wires[0] - 1;
-
-            switch (rev_wire) {
-            case 0:
-                AVX2::applyHadamardDoubleInternal(arr, num_qubits);
-                return;
-            default:
-                AVX2::applyHadamardDoubleExternal(arr, num_qubits, rev_wire);
+            if(rev_wire == 0) {
+                ApplyHadamardAVX2::template applyInternal<0>(arr, num_qubits);
+            } else {
+                ApplyHadamardAVX2::applyExternal(arr, num_qubits, rev_wire);
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
                           std::is_same_v<PrecisionT, double>);
         }
     }
-
+    /*
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
                         const std::vector<size_t> &wires,

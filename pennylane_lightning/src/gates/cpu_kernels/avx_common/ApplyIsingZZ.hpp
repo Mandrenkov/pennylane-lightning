@@ -40,7 +40,6 @@ struct ApplyIsingZZ {
                                bool inverse, ParamT angle) {
         // This function is allowed for AVX512 and AVX2 with float
 
-
         const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
         const auto parity = PrecisionAVXConcept::product(
                 PrecisionAVXConcept::internalParity(rev_wire0),
