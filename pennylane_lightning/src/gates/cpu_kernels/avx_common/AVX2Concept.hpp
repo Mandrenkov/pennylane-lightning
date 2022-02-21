@@ -173,7 +173,6 @@ struct RealProd {
         }
     }
 
-
     template<typename T = PrecisionT,
              std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
     static auto repeat4(PrecisionT value0, PrecisionT value1) -> RealProd<float> {
@@ -181,6 +180,49 @@ struct RealProd {
         return RealProd<float>{_mm256_setr_ps(value0, value0, value0, value0,
                                               value1, value1, value1, value1)};
 
+        // clang-format on
+    }
+
+    static auto setr2(PrecisionT value0, PrecisionT value1)
+        -> RealProd<PrecisionT> {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            // clang-format off
+            return RealProd<PrecisionT>
+                    {_mm256_setr_ps(value0, value1, value0, value1,
+                                    value0, value1, value0, value1)};
+            // clang-format on
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm256_setr_pd(value0, value1, value0, value1)};
+        }
+    }
+
+    static auto setr4(PrecisionT value0, PrecisionT value1,
+                      PrecisionT value2, PrecisionT value3)
+        -> RealProd<PrecisionT> {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            // clang-format off
+            return RealProd<PrecisionT>
+                    {_mm256_setr_ps(value0, value1, value2, value3,
+                                    value0, value1, value2, value3)};
+            // clang-format on
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm256_setr_pd(value0, value1, value2, value3)};
+        }
+    }
+
+    template<typename T = PrecisionT,
+             std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
+    static auto setr8(PrecisionT value0, PrecisionT value1, 
+                      PrecisionT value2, PrecisionT value3,
+                      PrecisionT value4, PrecisionT value5,
+                      PrecisionT value6, PrecisionT value7)
+        -> RealProd<float> {
+        // clang-format off
+        return RealProd<PrecisionT>
+                {_mm256_setr_ps(value0, value1, value2, value3,
+                                value4, value5, value6, value7)};
         // clang-format on
     }
 

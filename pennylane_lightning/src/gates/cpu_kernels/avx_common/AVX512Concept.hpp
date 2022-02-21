@@ -129,7 +129,6 @@ struct ImagProd {
         // clang-format on
     }
 
-
     [[nodiscard]] inline auto product(IntrinsicType<PrecisionT> val) const {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             const auto prod_shuffled = _mm512_permute_ps(val, 0B10'11'00'01);
@@ -228,6 +227,79 @@ struct RealProd {
         // clang-format on
     }
 
+    static auto setr2(PrecisionT value0, PrecisionT value1)
+        -> RealProd<PrecisionT> {
+        // clang-format off
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return RealProd<PrecisionT>
+                    {_mm512_setr_ps(value0, value1, value0, value1,
+                                    value0, value1, value0, value1,
+                                    value0, value1, value0, value1,
+                                    value0, value1, value0, value1)};
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm512_setr_pd(value0, value1, value0, value1,
+                                    value0, value1, value0, value1)};
+        }
+        // clang-format on
+    }
+
+    static auto setr4(PrecisionT value0, PrecisionT value1,
+                      PrecisionT value2, PrecisionT value3)
+        -> RealProd<PrecisionT> {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            // clang-format off
+            return RealProd<PrecisionT>
+                    {_mm512_setr_ps(value0, value1, value2, value3,
+                                    value0, value1, value2, value3,
+                                    value0, value1, value2, value3,
+                                    value0, value1, value2, value3)};
+            // clang-format on
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm512_setr_pd(value0, value1, value2, value3,
+                                    value0, value1, value2, value3)};
+        }
+    }
+
+    // clang-format off
+    static auto setr8(PrecisionT value0, PrecisionT value1, 
+                      PrecisionT value2, PrecisionT value3,
+                      PrecisionT value4, PrecisionT value5,
+                      PrecisionT value6, PrecisionT value7)
+        -> RealProd<PrecisionT> {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return RealProd<PrecisionT>
+                    {_mm512_setr_ps(value0, value1, value2, value3,
+                                    value4, value5, value6, value7,
+                                    value0, value1, value2, value3,
+                                    value4, value5, value6, value7)};
+        } else { // double
+            return RealProd<PrecisionT>
+                    {_mm512_setr_pd(value0, value1, value2, value3,
+                                    value4, value5, value6, value7)};
+        }
+    }
+
+    template<typename T = PrecisionT,
+             std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
+    static auto setr16(PrecisionT value0, PrecisionT value1, 
+                       PrecisionT value2, PrecisionT value3,
+                       PrecisionT value4, PrecisionT value5,
+                       PrecisionT value6, PrecisionT value7,
+                       PrecisionT value8, PrecisionT value9,
+                       PrecisionT value10, PrecisionT value11,
+                       PrecisionT value12, PrecisionT value13,
+                       PrecisionT value14, PrecisionT value15)
+        -> RealProd<float> {
+        return RealProd<PrecisionT>
+            {_mm512_setr_ps(value0,  value1,  value2,  value3,
+                            value4,  value5,  value6,  value7,
+                            value8,  value9,  value10, value11,
+                            value12, value13, value14, value15)};
+    }
+    // clang-format on
+
     [[nodiscard]] inline auto product(IntrinsicType<PrecisionT> val) const {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             return _mm512_mul_ps(val, factor_);
@@ -236,7 +308,6 @@ struct RealProd {
         }
     }
 };
-
 
 inline __m512 paritySInternal(size_t rev_wire) {
     // clang-format off
@@ -347,7 +418,6 @@ struct AVX512Concept {
             static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
         }
     }
-
     
     template<size_t rev_wire>
     static auto internalSwap(IntrinsicType v) {
