@@ -16,9 +16,7 @@
  * Defines kernel functions with AVX512F and AVX512DQ
  */
 #pragma once
-/*
-#include "avx512/ApplyCZ.hpp"
-*/
+#include "avx_common/ApplyCZ.hpp"
 #include "avx_common/ApplyPauliX.hpp"
 #include "avx_common/ApplyPauliY.hpp"
 #include "avx_common/ApplyPauliZ.hpp"
@@ -460,11 +458,12 @@ class GateImplementationsAVX512 {
     }
 
     /* Two-qubit gates*/
-    /*
     template <class PrecisionT>
-    static void applyCZ(std::complex<PrecisionT> *arr, const size_t num_qubits,
+    static void applyCZ(std::complex<PrecisionT> *arr,
+                        const size_t num_qubits,
                         const std::vector<size_t> &wires,
                         [[maybe_unused]] bool inverse) {
+        using ApplyCZAVX512 = AVX::ApplyCZ<PrecisionT, AVXConcept>;
         assert(wires.size() == 2);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
@@ -475,13 +474,13 @@ class GateImplementationsAVX512 {
             const size_t rev_wire0 = num_qubits - wires[1] - 1;
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
             if (rev_wire0 < 3 && rev_wire1 < 3) {
-                AVX512::applyCZFloatInternalInternal(arr, num_qubits, rev_wire0,
+                ApplyCZAVX512::applyInternalInternal(arr, num_qubits, rev_wire0,
                                                      rev_wire1);
             } else if (std::min(rev_wire0, rev_wire1) < 3) {
-                AVX512::applyCZFloatInternalExternal(arr, num_qubits, rev_wire0,
+                ApplyCZAVX512::applyInternalExternal(arr, num_qubits, rev_wire0,
                                                      rev_wire1);
             } else {
-                AVX512::applyCZFloatExternalExternal(arr, num_qubits, rev_wire0,
+                ApplyCZAVX512::applyExternalExternal(arr, num_qubits, rev_wire0,
                                                      rev_wire1);
             }
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -493,14 +492,14 @@ class GateImplementationsAVX512 {
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
 
             if (rev_wire0 < 2 && rev_wire1 < 2) {
-                AVX512::applyCZDoubleInternalInternal(arr, num_qubits,
-                                                      rev_wire0, rev_wire1);
+                ApplyCZAVX512::applyInternalInternal(arr, num_qubits,
+                                                     rev_wire0, rev_wire1);
             } else if (std::min(rev_wire0, rev_wire1) < 2) {
-                AVX512::applyCZDoubleInternalExternal(arr, num_qubits,
-                                                      rev_wire0, rev_wire1);
+                ApplyCZAVX512::applyInternalExternal(arr, num_qubits,
+                                                     rev_wire0, rev_wire1);
             } else {
-                AVX512::applyCZDoubleExternalExternal(arr, num_qubits,
-                                                      rev_wire0, rev_wire1);
+                ApplyCZAVX512::applyExternalExternal(arr, num_qubits,
+                                                     rev_wire0, rev_wire1);
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
@@ -508,7 +507,6 @@ class GateImplementationsAVX512 {
                           "Only float and double are supported.");
         }
     }
-    */
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyIsingZZ(std::complex<PrecisionT> *arr,
                              const size_t num_qubits,

@@ -288,6 +288,27 @@ struct AVX2Concept {
     }
 
     PL_FORCE_INLINE
+    static auto loadu(const std::complex<PrecisionT>* p) -> IntrinsicType {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return _mm256_loadu_ps(reinterpret_cast<const PrecisionT*>(p));
+        } else if (std::is_same_v<PrecisionT, double>) {
+            return _mm256_loadu_pd(reinterpret_cast<const PrecisionT*>(p));
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        }
+    }
+    PL_FORCE_INLINE
+    static auto loadu(PrecisionT* p) -> IntrinsicType {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return _mm256_loadu_ps(p);
+        } else if (std::is_same_v<PrecisionT, double>) {
+            return _mm256_loadu_pd(p);
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    PL_FORCE_INLINE
     static void store(std::complex<PrecisionT>* p, IntrinsicType value) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             _mm256_store_ps(reinterpret_cast<PrecisionT*>(p), value);
@@ -299,7 +320,7 @@ struct AVX2Concept {
     }
     
     PL_FORCE_INLINE
-    static auto product(IntrinsicType v0, IntrinsicType v1) {
+    static auto mul(IntrinsicType v0, IntrinsicType v1) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             return _mm256_mul_ps(v0, v1);
         } else if (std::is_same_v<PrecisionT, double>) {

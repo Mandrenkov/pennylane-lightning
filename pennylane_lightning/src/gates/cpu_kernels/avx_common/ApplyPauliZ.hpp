@@ -38,7 +38,7 @@ struct ApplyPauliZ {
         for (size_t k = 0; k < exp2(num_qubits);
              k += PrecisionAVXConcept::step_for_complex_precision) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            PrecisionAVXConcept::store(arr + k, PrecisionAVXConcept::product(factor, v));
+            PrecisionAVXConcept::store(arr + k, PrecisionAVXConcept::mul(factor, v));
         }
     }
     static void applyExternal(std::complex<PrecisionT> *arr,

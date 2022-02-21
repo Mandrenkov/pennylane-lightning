@@ -373,6 +373,28 @@ struct AVX512Concept {
     }
 
     PL_FORCE_INLINE
+    static auto loadu(std::complex<PrecisionT>* p) -> IntrinsicType {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return _mm512_loadu_ps(p);
+        } else if (std::is_same_v<PrecisionT, double>) {
+            return _mm512_loadu_pd(p);
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    PL_FORCE_INLINE
+    static auto loadu(PrecisionT* p) -> IntrinsicType {
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            return _mm512_loadu_ps(p);
+        } else if (std::is_same_v<PrecisionT, double>) {
+            return _mm512_loadu_pd(p);
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    PL_FORCE_INLINE
     static void store(std::complex<PrecisionT>* p, IntrinsicType value) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             _mm512_store_ps(p, value);
@@ -384,7 +406,7 @@ struct AVX512Concept {
     }
     
     PL_FORCE_INLINE
-    static auto product(IntrinsicType v0, IntrinsicType v1) {
+    static auto mul(IntrinsicType v0, IntrinsicType v1) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             return _mm512_mul_ps(v0, v1);
         } else if (std::is_same_v<PrecisionT, double>) {
@@ -404,6 +426,7 @@ struct AVX512Concept {
             static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
         }
     }
+    
 
     using ImagProd = AVX512::ImagProd<PrecisionT>;
     using RealProd = AVX512::RealProd<PrecisionT>;
@@ -418,6 +441,7 @@ struct AVX512Concept {
             static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
         }
     }
+
     
     template<size_t rev_wire>
     static auto internalSwap(IntrinsicType v) {

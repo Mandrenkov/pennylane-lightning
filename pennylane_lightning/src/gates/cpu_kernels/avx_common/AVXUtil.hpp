@@ -68,4 +68,16 @@ struct PackedInteger<64> {
 template<size_t packed_bytes>
 using PackedIntegerType = typename PackedInteger<packed_bytes>::Type;
 
+template<typename PrecisionAVXConcept, typename Func>
+static auto toParity(Func&& func) -> decltype(auto) {
+    using PrecisionT = typename PrecisionAVXConcept::PrecisionT;
+    std::array<PrecisionT, 2*PrecisionAVXConcept::step_for_complex_precision>
+        data = {};
+    for(size_t idx = 0; idx < PrecisionAVXConcept::step_for_complex_precision;
+           idx++) {
+        data[2*idx] = static_cast<PrecisionT>(1.0) - 2*static_cast<PrecisionT>(func(idx));
+        data[2*idx + 1] = static_cast<PrecisionT>(1.0) - 2*static_cast<PrecisionT>(func(idx));
+    }
+    return PrecisionAVXConcept::loadu(data.data());
+}
 } // namespace Pennylane::Gates::AVX
