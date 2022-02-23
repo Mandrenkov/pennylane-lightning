@@ -25,53 +25,44 @@
 #include <complex>
 
 namespace Pennylane::Gates::AVX {
-template <typename PrecisionT, template <typename> typename AVXConcept>
-struct ApplyCZ {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
+template <typename PrecisionT, size_t packed_size> struct ApplyCZ {
+    using PrecisionAVXConcept = AVXConceptType<PrecisionT, packed_size>;
 
     static void applyInternalInternal(std::complex<PrecisionT> *arr,
-                                      size_t num_qubits,
-                                      size_t rev_wire0,
+                                      size_t num_qubits, size_t rev_wire0,
                                       size_t rev_wire1) {
-        const auto parity = toParity<PrecisionAVXConcept>(
-            [=](size_t idx) {
-                return ((idx >> rev_wire0) & 1U) & ((idx >> rev_wire1) & 1U);
-            }
-        );
+        const auto parity = toParity<PrecisionT, packed_size>([=](size_t idx) {
+            return ((idx >> rev_wire0) & 1U) & ((idx >> rev_wire1) & 1U);
+        });
 
-        // clang-format on
-        for (size_t n = 0; n < exp2(num_qubits);
-             n += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t n = 0; n < exp2(num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);
-            PrecisionAVXConcept::store(arr + n,
-                    PrecisionAVXConcept::mul(v, parity));
+            PrecisionAVXConcept::store(arr + n, v * parity);
         }
     }
 
     static void applyInternalExternal(std::complex<PrecisionT> *arr,
-                                      size_t num_qubits,
-                                      size_t rev_wire0,
+                                      size_t num_qubits, size_t rev_wire0,
                                       size_t rev_wire1) {
         const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
         const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
 
-        const size_t max_rev_wire_shift = (static_cast<size_t>(1U) << rev_wire_max);
+        const size_t max_rev_wire_shift =
+            (static_cast<size_t>(1U) << rev_wire_max);
         const size_t max_wire_parity = fillTrailingOnes(rev_wire_max);
         const size_t max_wire_parity_inv = fillLeadingOnes(rev_wire_max + 1);
 
-        const auto parity = PrecisionAVXConcept::internalParity(rev_wire_min);
+        const auto parity =
+            internalParity<PrecisionT, packed_size>(rev_wire_min);
 
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 =
                 ((k << 1U) & max_wire_parity_inv) | (max_wire_parity & k);
             const size_t i1 = i0 | max_rev_wire_shift;
 
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
-            PrecisionAVXConcept::store(arr + i1, PrecisionAVXConcept::mul(v1, parity));
+            PrecisionAVXConcept::store(arr + i1, v1 * parity);
         }
     }
 
@@ -89,19 +80,15 @@ struct ApplyCZ {
         const size_t parity_high = fillLeadingOnes(rev_wire_max + 1);
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
-    
-        const auto minus_one = RealProd(-1.0);
 
-        for (size_t k = 0; k < exp2(num_qubits - 2);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 2); k += packed_size / 2) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
             const size_t i11 = i00 | rev_wire0_shift | rev_wire1_shift;
 
             const auto v = PrecisionAVXConcept::load(arr + i11); // 11
-            PrecisionAVXConcept::store(arr + i11, minus_one.product(v));
+            PrecisionAVXConcept::store(arr + i11, -1.0 * v);
         }
     }
-
 };
 } // namespace Pennylane::Gates::AVX

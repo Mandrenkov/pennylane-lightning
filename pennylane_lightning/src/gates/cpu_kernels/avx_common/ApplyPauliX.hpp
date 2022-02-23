@@ -18,6 +18,7 @@
 #pragma once
 #include "AVXUtil.hpp"
 #include "BitUtil.hpp"
+#include "Permutation.hpp"
 #include "Util.hpp"
 
 #include <immintrin.h>
@@ -26,26 +27,29 @@
 
 namespace Pennylane::Gates::AVX {
 
-template<typename PrecisionT, template<typename> class AVXConcept>
-struct ApplyPauliX {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
+template <typename PrecisionT, size_t packed_size> struct ApplyPauliX {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
 
     template <size_t rev_wire>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits) {
+        using namespace Permutation;
+        constexpr static auto compiled_permutation =
+            compilePermutation<PrecisionT>(
+                flip(identity<packed_size>(), rev_wire));
         for (size_t k = 0; k < (1U << num_qubits);
              k += PrecisionAVXConcept::step_for_complex_precision) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            PrecisionAVXConcept::store(arr + k,
-                    PrecisionAVXConcept::template internalSwap<rev_wire>(v));
+            PrecisionAVXConcept::store(
+                arr + k,
+                permute<compiled_permutation.within_lane_,
+                        compiled_permutation.imm8_>(compiled_permutation, v));
         }
     }
 
     static void applyExternal(std::complex<PrecisionT> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire) {
+                              const size_t num_qubits, const size_t rev_wire) {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);

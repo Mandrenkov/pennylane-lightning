@@ -51,7 +51,7 @@ class GateImplementationsParallelLM
     constexpr static KernelType kernel_id = KernelType::ParallelLM;
     constexpr static std::string_view name = "ParallelLM";
 
-    constexpr static uint32_t data_alignment_in_bytes = 1;
+    constexpr static uint32_t packed_bytes = 4;
 
     constexpr static std::array implemented_gates = {
         GateOperation::PauliX,
@@ -124,8 +124,8 @@ class GateImplementationsParallelLM
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
         if (inverse) {
-#pragma omp parallel for default(none) \
-            firstprivate(wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
+#pragma omp parallel for default(none) firstprivate(                           \
+    wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
             for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += stepsize) {
                 PL_UNROLL_LOOP
                 for (size_t idx = 0; idx < stepsize; idx++) {
@@ -144,8 +144,8 @@ class GateImplementationsParallelLM
                 }
             }
         } else {
-#pragma omp parallel for default(none) \
-            firstprivate(wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
+#pragma omp parallel for default(none) firstprivate(                           \
+    wire_parity_inv, wire_parity, rev_wire_shift, arr, num_qubits, matrix)
             for (size_t n = 0; n < Util::exp2(num_qubits - 1); n += stepsize) {
                 PL_UNROLL_LOOP
                 for (size_t idx = 0; idx < stepsize; idx++) {
@@ -202,9 +202,9 @@ class GateImplementationsParallelLM
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
         if (inverse) {
-#pragma omp parallel for default(none) \
-            firstprivate(parity_high, parity_middle, parity_low, \
-                    rev_wire0_shift, rev_wire1_shift, arr, num_qubits, matrix)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(parity_high, parity_middle, parity_low, rev_wire0_shift,      \
+                 rev_wire1_shift, arr, num_qubits, matrix)
             for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += stepsize) {
                 PL_UNROLL_LOOP
                 for (size_t idx = 0; idx < stepsize; idx++) {
@@ -256,9 +256,9 @@ class GateImplementationsParallelLM
                 }
             }
         } else {
-#pragma omp parallel for default(none) \
-            firstprivate(parity_high, parity_middle, parity_low, \
-                    rev_wire0_shift, rev_wire1_shift, arr, num_qubits, matrix)
+#pragma omp parallel for default(none)                                         \
+    firstprivate(parity_high, parity_middle, parity_low, rev_wire0_shift,      \
+                 rev_wire1_shift, arr, num_qubits, matrix)
             for (size_t n = 0; n < Util::exp2(num_qubits - 2); n += stepsize) {
                 PL_UNROLL_LOOP
                 for (size_t idx = 0; idx < stepsize; idx++) {

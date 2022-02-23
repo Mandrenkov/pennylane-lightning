@@ -22,7 +22,7 @@
 #elif defined(_MSC_VER)
 #define PL_UNREACHABLE __assume(false)
 #else // Unsupported compiler
-#define PL_UNREACHABLE 
+#define PL_UNREACHABLE
 #endif
 
 #if defined(__AVX2__)
@@ -71,7 +71,7 @@
 #endif
 
 // Define force inline
-#if defined(__GNUC__) || defined (__clang__)
+#if defined(__GNUC__) || defined(__clang__)
 #define PL_FORCE_INLINE __attribute__((always_inline))
 #elif defined(_MSC_VER)
 #define PL_FORCE_INLINE __forceinline

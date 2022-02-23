@@ -33,7 +33,7 @@ class StateVectorManaged
 
   private:
     using BaseType = StateVectorBase<PrecisionT, StateVectorManaged>;
-    using Allocator = AlignedAllocator<ComplexPrecisionT, 64>; //NOLINT
+    using Allocator = AlignedAllocator<ComplexPrecisionT, 64>; // NOLINT
 
     std::vector<ComplexPrecisionT, Allocator> data_;
 

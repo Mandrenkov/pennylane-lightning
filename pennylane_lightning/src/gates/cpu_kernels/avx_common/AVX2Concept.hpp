@@ -25,10 +25,10 @@
 #include <type_traits>
 
 namespace Pennylane::Gates::AVX2 {
-template <class PrecisionT>
-struct Intrinsic {
-    static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>,
-            "Data type for AVX256 must be float or double");
+template <class PrecisionT> struct Intrinsic {
+    static_assert(std::is_same_v<PrecisionT, float> ||
+                      std::is_same_v<PrecisionT, double>,
+                  "Data type for AVX256 must be float or double");
 };
 
 template <> struct Intrinsic<float> { using Type = __m256; };
@@ -42,29 +42,27 @@ using IntrinsicType = typename Intrinsic<PrecisionT>::Type;
  * @brief Simple class for easing product between complex values
  * packed in AVX256 datatype and a pure imaginary value
  */
-template <typename PrecisionT>
-struct ImagProd {
-    static_assert(std::is_same_v<PrecisionT, float> 
-            || std::is_same_v<PrecisionT, double>);
+template <typename PrecisionT> struct ImagProd {
+    static_assert(std::is_same_v<PrecisionT, float> ||
+                  std::is_same_v<PrecisionT, double>);
     IntrinsicType<PrecisionT> factor_;
 
     ImagProd() = default;
 
     explicit ImagProd(PrecisionT value) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            factor_ = _mm256_setr_ps(-value, value, -value, value,
-                                     -value, value, -value, value);
+            factor_ = _mm256_setr_ps(-value, value, -value, value, -value,
+                                     value, -value, value);
         } else {
             factor_ = _mm256_setr_pd(-value, value, -value, value);
         }
     }
-    explicit ImagProd(const IntrinsicType<PrecisionT>& val) : factor_{val} {
-    }
+    explicit ImagProd(const IntrinsicType<PrecisionT> &val) : factor_{val} {}
 
-    explicit ImagProd(IntrinsicType<PrecisionT>&& val) : factor_{std::move(val)} {
-    }
+    explicit ImagProd(IntrinsicType<PrecisionT> &&val)
+        : factor_{std::move(val)} {}
 
-    ImagProd& operator*=(PrecisionT val) {
+    ImagProd &operator*=(PrecisionT val) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             factor_ = _mm256_mul_ps(factor_, _mm256_set1_ps(val));
         } else {
@@ -72,7 +70,7 @@ struct ImagProd {
         }
         return *this;
     }
-    ImagProd& operator*=(IntrinsicType<PrecisionT> val) {
+    ImagProd &operator*=(IntrinsicType<PrecisionT> val) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             factor_ = _mm256_mul_ps(factor_, val);
         } else {
@@ -80,8 +78,8 @@ struct ImagProd {
         }
         return *this;
     }
-    
-    static auto repeat2(PrecisionT value0, PrecisionT value1) 
+
+    static auto repeat2(PrecisionT value0, PrecisionT value1)
         -> ImagProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
@@ -90,13 +88,14 @@ struct ImagProd {
                                     -value0, value0, -value1, value1)};
             // clang-format on
         } else {
-            return ImagProd<PrecisionT>
-                    {_mm256_setr_pd(-value0, value0, -value1, value1)};
+            return ImagProd<PrecisionT>{
+                _mm256_setr_pd(-value0, value0, -value1, value1)};
         }
     }
 
-    template<typename T = PrecisionT,
-             std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
+    template <typename T = PrecisionT,
+              std::enable_if_t<std::is_same_v<T, float>, bool> =
+                  true> // only enable for float
     static auto repeat4(float value0, float value1) -> ImagProd<float> {
         // clang-format off
         return ImagProd<float>{
@@ -119,10 +118,9 @@ struct ImagProd {
  * @brief Simple class for easing product between complex values
  * packed in AVX256 datatype and a real value
  */
-template <typename PrecisionT>
-struct RealProd {
-    static_assert(std::is_same_v<PrecisionT, float> 
-            || std::is_same_v<PrecisionT, double>);
+template <typename PrecisionT> struct RealProd {
+    static_assert(std::is_same_v<PrecisionT, float> ||
+                  std::is_same_v<PrecisionT, double>);
     IntrinsicType<PrecisionT> factor_;
 
     RealProd() = default;
@@ -135,13 +133,12 @@ struct RealProd {
         }
     }
 
-    explicit RealProd(const IntrinsicType<PrecisionT>& val) : factor_{val} {
-    }
+    explicit RealProd(const IntrinsicType<PrecisionT> &val) : factor_{val} {}
 
-    explicit RealProd(IntrinsicType<PrecisionT>&& val) : factor_{std::move(val)} {
-    }
+    explicit RealProd(IntrinsicType<PrecisionT> &&val)
+        : factor_{std::move(val)} {}
 
-    RealProd& operator*=(PrecisionT val) {
+    RealProd &operator*=(PrecisionT val) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             factor_ = _mm256_mul_ps(factor_, _mm256_set1_ps(val));
         } else {
@@ -150,7 +147,7 @@ struct RealProd {
         return *this;
     }
 
-    RealProd& operator*=(IntrinsicType<PrecisionT> val) {
+    RealProd &operator*=(IntrinsicType<PrecisionT> val) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             factor_ = _mm256_mul_ps(factor_, val);
         } else {
@@ -158,7 +155,7 @@ struct RealProd {
         }
         return *this;
     }
-    
+
     static auto repeat2(PrecisionT value0, PrecisionT value1)
         -> RealProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
@@ -168,14 +165,16 @@ struct RealProd {
                                     value0, value0, value1, value1)};
             // clang-format on
         } else { // double
-            return RealProd<PrecisionT>
-                    {_mm256_setr_pd(value0, value0, value1, value1)};
+            return RealProd<PrecisionT>{
+                _mm256_setr_pd(value0, value0, value1, value1)};
         }
     }
 
-    template<typename T = PrecisionT,
-             std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
-    static auto repeat4(PrecisionT value0, PrecisionT value1) -> RealProd<float> {
+    template <typename T = PrecisionT,
+              std::enable_if_t<std::is_same_v<T, float>, bool> =
+                  true> // only enable for float
+    static auto repeat4(PrecisionT value0, PrecisionT value1)
+        -> RealProd<float> {
         // clang-format off
         return RealProd<float>{_mm256_setr_ps(value0, value0, value0, value0,
                                               value1, value1, value1, value1)};
@@ -192,14 +191,13 @@ struct RealProd {
                                     value0, value1, value0, value1)};
             // clang-format on
         } else { // double
-            return RealProd<PrecisionT>
-                    {_mm256_setr_pd(value0, value1, value0, value1)};
+            return RealProd<PrecisionT>{
+                _mm256_setr_pd(value0, value1, value0, value1)};
         }
     }
 
-    static auto setr4(PrecisionT value0, PrecisionT value1,
-                      PrecisionT value2, PrecisionT value3)
-        -> RealProd<PrecisionT> {
+    static auto setr4(PrecisionT value0, PrecisionT value1, PrecisionT value2,
+                      PrecisionT value3) -> RealProd<PrecisionT> {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             // clang-format off
             return RealProd<PrecisionT>
@@ -207,18 +205,17 @@ struct RealProd {
                                     value0, value1, value2, value3)};
             // clang-format on
         } else { // double
-            return RealProd<PrecisionT>
-                    {_mm256_setr_pd(value0, value1, value2, value3)};
+            return RealProd<PrecisionT>{
+                _mm256_setr_pd(value0, value1, value2, value3)};
         }
     }
 
-    template<typename T = PrecisionT,
-             std::enable_if_t<std::is_same_v<T, float>, bool> = true> // only enable for float
-    static auto setr8(PrecisionT value0, PrecisionT value1, 
-                      PrecisionT value2, PrecisionT value3,
-                      PrecisionT value4, PrecisionT value5,
-                      PrecisionT value6, PrecisionT value7)
-        -> RealProd<float> {
+    template <typename T = PrecisionT,
+              std::enable_if_t<std::is_same_v<T, float>, bool> =
+                  true> // only enable for float
+    static auto setr8(PrecisionT value0, PrecisionT value1, PrecisionT value2,
+                      PrecisionT value3, PrecisionT value4, PrecisionT value5,
+                      PrecisionT value6, PrecisionT value7) -> RealProd<float> {
         // clang-format off
         return RealProd<PrecisionT>
                 {_mm256_setr_ps(value0, value1, value2, value3,
@@ -264,69 +261,75 @@ inline __m256d parityDInternal(size_t rev_wire) {
     return _mm256_setzero_pd();
 }
 template <typename T>
-[[maybe_unused]] constexpr size_t step_for_complex_precision = 
-                32 / sizeof(T) / 2;
+[[maybe_unused]] constexpr size_t step_for_complex_precision = 32 / sizeof(T) /
+                                                               2;
 } // namespace Pennylane::Gates::AVX2
 
 namespace Pennylane::Gates::AVX {
-template <typename T>
-struct AVX2Concept {
+template <typename T> struct AVX2Concept {
     using PrecisionT = T;
     using IntrinsicType = AVX2::IntrinsicType<PrecisionT>;
-    constexpr static size_t step_for_complex_precision = AVX2::step_for_complex_precision<PrecisionT>;
-    constexpr static size_t internal_wires = Pennylane::Util::constLog2PerfectPower(step_for_complex_precision);
+    constexpr static size_t step_for_complex_precision =
+        AVX2::step_for_complex_precision<PrecisionT>;
+    constexpr static size_t internal_wires =
+        Pennylane::Util::constLog2PerfectPower(step_for_complex_precision);
 
     PL_FORCE_INLINE
-    static auto load(const std::complex<PrecisionT>* p) -> IntrinsicType {
+    static auto load(const std::complex<PrecisionT> *p) -> IntrinsicType {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            return _mm256_load_ps(reinterpret_cast<const PrecisionT*>(p));
+            return _mm256_load_ps(reinterpret_cast<const PrecisionT *>(p));
         } else if (std::is_same_v<PrecisionT, double>) {
-            return _mm256_load_pd(reinterpret_cast<const PrecisionT*>(p));
+            return _mm256_load_pd(reinterpret_cast<const PrecisionT *>(p));
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
 
     PL_FORCE_INLINE
-    static auto loadu(const std::complex<PrecisionT>* p) -> IntrinsicType {
+    static auto loadu(const std::complex<PrecisionT> *p) -> IntrinsicType {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            return _mm256_loadu_ps(reinterpret_cast<const PrecisionT*>(p));
+            return _mm256_loadu_ps(reinterpret_cast<const PrecisionT *>(p));
         } else if (std::is_same_v<PrecisionT, double>) {
-            return _mm256_loadu_pd(reinterpret_cast<const PrecisionT*>(p));
+            return _mm256_loadu_pd(reinterpret_cast<const PrecisionT *>(p));
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
     PL_FORCE_INLINE
-    static auto loadu(PrecisionT* p) -> IntrinsicType {
+    static auto loadu(PrecisionT *p) -> IntrinsicType {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             return _mm256_loadu_ps(p);
         } else if (std::is_same_v<PrecisionT, double>) {
             return _mm256_loadu_pd(p);
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
 
     PL_FORCE_INLINE
-    static void store(std::complex<PrecisionT>* p, IntrinsicType value) {
+    static void store(std::complex<PrecisionT> *p, IntrinsicType value) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
-            _mm256_store_ps(reinterpret_cast<PrecisionT*>(p), value);
+            _mm256_store_ps(reinterpret_cast<PrecisionT *>(p), value);
         } else if (std::is_same_v<PrecisionT, double>) {
-            _mm256_store_pd(reinterpret_cast<PrecisionT*>(p), value);
+            _mm256_store_pd(reinterpret_cast<PrecisionT *>(p), value);
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
-    
+
     PL_FORCE_INLINE
     static auto mul(IntrinsicType v0, IntrinsicType v1) {
         if constexpr (std::is_same_v<PrecisionT, float>) {
             return _mm256_mul_ps(v0, v1);
         } else if (std::is_same_v<PrecisionT, double>) {
             return _mm256_mul_pd(v0, v1);
-        }else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
 
@@ -336,8 +339,9 @@ struct AVX2Concept {
             return _mm256_add_ps(v0, v1);
         } else if (std::is_same_v<PrecisionT, double>) {
             return _mm256_add_pd(v0, v1);
-        }else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
 
@@ -351,27 +355,28 @@ struct AVX2Concept {
         } else if (std::is_same_v<PrecisionT, double>) {
             return AVX2::parityDInternal(rev_wire);
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
-    
-    template<size_t rev_wire>
-    static auto internalSwap(IntrinsicType v) {
+
+    template <size_t rev_wire> static auto internalSwap(IntrinsicType v) {
         static_assert(rev_wire < internal_wires);
         if constexpr (std::is_same_v<PrecisionT, float>) {
             if constexpr (rev_wire == 0) {
                 return _mm256_permute_ps(v, 0B01'00'11'10);
-            } else {// rev_wire == 1
+            } else { // rev_wire == 1
                 return _mm256_permutevar8x32_ps(
                     v,
-                    _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5, 4)); // NOLINT(readability-magic-numbers)
+                    _mm256_set_epi32(3, 2, 1, 0, 7, 6, 5,
+                                     4)); // NOLINT(readability-magic-numbers)
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             return _mm256_permute4x64_pd(v, 0B01'00'11'10);
         } else {
-            static_assert(std::is_same_v<PrecisionT, float> || std::is_same_v<PrecisionT, double>);
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
         }
     }
 };
 } // namespace Pennylane::Gates::AVX
-

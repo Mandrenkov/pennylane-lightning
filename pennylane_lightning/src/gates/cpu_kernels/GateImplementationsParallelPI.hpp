@@ -50,7 +50,7 @@ class GateImplementationsParallelPI
   public:
     constexpr static KernelType kernel_id = KernelType::ParallelPI;
     constexpr static std::string_view name = "ParallelPI";
-    constexpr static uint32_t data_alignment_in_bytes = 1;
+    constexpr static uint32_t packed_bytes = 4;
 
     constexpr static std::array implemented_gates = {
         GateOperation::PauliX,  GateOperation::PauliY,

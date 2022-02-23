@@ -18,6 +18,7 @@
 #pragma once
 #include "AVXUtil.hpp"
 #include "BitUtil.hpp"
+#include "Permutation.hpp"
 #include "Util.hpp"
 
 #include <immintrin.h>
@@ -25,64 +26,72 @@
 #include <complex>
 
 namespace Pennylane::Gates::AVX {
-template<typename PrecisionT, template<typename> class AVXConcept>
-struct ApplyRZ {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-     
+
+template <typename PrecisionT, size_t packed_size> struct ApplyRZ {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
+
     template <size_t rev_wire, class ParamT>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
-                              [[maybe_unused]] bool inverse,
-                              ParamT angle) {
-        const PrecisionT isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+                              [[maybe_unused]] bool inverse, ParamT angle) {
+        using namespace Permutation;
+        const PrecisionT isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
 
-        const auto real_cos_factor = RealProd(std::cos(angle / 2));
-        auto imag_sin_factor = ImagProd(isin);
-        imag_sin_factor *= PrecisionAVXConcept::internalParity(rev_wire);
-    
-        for (size_t n = 0; n < (1U << num_qubits);
-            n += PrecisionAVXConcept::step_for_complex_precision) {
+        const auto real_cos =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+        const auto imag_sin = imagFactor<PrecisionT, packed_size>(isin) *
+                              internalParity<PrecisionT, packed_size>(rev_wire);
+
+        constexpr static auto perm = compilePermutation<PrecisionT>(
+            swapRealImag(identity<packed_size>()));
+
+        for (size_t n = 0; n < (1U << num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);
-            PrecisionAVXConcept::store(arr + n, 
-                    PrecisionAVXConcept::add(real_cos_factor.product(v),
-                                             imag_sin_factor.product(v)));
+            const auto w = permute<perm.within_lane_, perm.imm8_>(perm, v);
+            PrecisionAVXConcept::store(arr + n,
+                                       (real_cos * v) + (imag_sin * w));
         }
     }
 
     template <class ParamT>
     static void applyExternal(std::complex<PrecisionT> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire,
-                              [[maybe_unused]] bool inverse,
-                              ParamT angle) {
+                              const size_t num_qubits, const size_t rev_wire,
+                              [[maybe_unused]] bool inverse, ParamT angle) {
+        using namespace Permutation;
+
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        const auto real_cos_factor = RealProd(std::cos(angle / 2));
-        const PrecisionT isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        const auto real_cos =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+        const PrecisionT isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        const auto p_isin = imagFactor<PrecisionT, packed_size>(isin);
+        const auto m_isin = imagFactor<PrecisionT, packed_size>(-isin);
 
-        const auto plus_isin_prod = ImagProd(isin);
-        const auto minus_isin_prod = ImagProd(-isin);
+        constexpr static auto perm = compilePermutation<PrecisionT>(
+            swapRealImag(identity<packed_size>()));
 
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
             const auto v0 = PrecisionAVXConcept::load(arr + i0);
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
-            const auto v0_cos = real_cos_factor.product(v0);
-            const auto v0_isin = plus_isin_prod.product(v0);
+            const auto v0_cos = real_cos * v0;
+            const auto v0_isin =
+                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v0);
 
-            const auto v1_cos = real_cos_factor.product(v1);
-            const auto v1_isin = minus_isin_prod.product(v1);
+            const auto v1_cos = real_cos * v1;
+            const auto v1_isin =
+                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v1);
 
-            PrecisionAVXConcept::store(arr + i0, PrecisionAVXConcept::add(v0_cos, v0_isin));
-            PrecisionAVXConcept::store(arr + i1, PrecisionAVXConcept::add(v1_cos, v1_isin));
+            PrecisionAVXConcept::store(arr + i0, v0_cos + v0_isin);
+            PrecisionAVXConcept::store(arr + i1, v1_cos + v1_isin);
         }
     }
 };

@@ -25,37 +25,32 @@
 #include <complex>
 
 namespace Pennylane::Gates::AVX {
-template<typename PrecisionT, template<typename> class AVXConcept>
-struct ApplyPauliZ {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-    
+template <typename PrecisionT, size_t packed_size> struct ApplyPauliZ {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
+
     template <size_t rev_wire>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits) {
-        const auto factor = PrecisionAVXConcept::internalParity(rev_wire);
-        for (size_t k = 0; k < exp2(num_qubits);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        const auto factor = internalParity<PrecisionT, packed_size>(rev_wire);
+        for (size_t k = 0; k < exp2(num_qubits); k += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            PrecisionAVXConcept::store(arr + k, PrecisionAVXConcept::mul(factor, v));
+            PrecisionAVXConcept::store(arr + k, factor * v);
         }
     }
     static void applyExternal(std::complex<PrecisionT> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire) {
+                              const size_t num_qubits, const size_t rev_wire) {
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        const auto factor = RealProd(-1.0);
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        const auto factor = set1<PrecisionT, packed_size>(-1.0);
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
-            PrecisionAVXConcept::store(arr + i1, factor.product(v1));
+            PrecisionAVXConcept::store(arr + i1, factor * v1);
         }
     }
 };

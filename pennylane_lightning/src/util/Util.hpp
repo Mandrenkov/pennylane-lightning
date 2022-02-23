@@ -365,7 +365,7 @@ template <class T, class Func> void for_each_enum(Func &&func) {
 
 template <class TypeList> struct common_alignment {
     constexpr static uint32_t value =
-        std::max(TypeList::Type::data_alignment_in_bytes,
+        std::max(TypeList::Type::packed_bytes,
                  common_alignment<typename TypeList::Next>::value);
 };
 template <> struct common_alignment<void> {

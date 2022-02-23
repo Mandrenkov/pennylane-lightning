@@ -18,54 +18,64 @@
 #pragma once
 #include "AVXUtil.hpp"
 #include "BitUtil.hpp"
-#include "Util.hpp"
 #include "Permutation.hpp"
+#include "Util.hpp"
 
 #include <immintrin.h>
 
 #include <complex>
 
 namespace Pennylane::Gates::AVX {
-template<typename PrecisionT, template<typename> class AVXConcept>
-struct ApplyPauliY {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
+template <typename PrecisionT, size_t packed_size> struct ApplyPauliY {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
 
     template <size_t rev_wire>
     static void applyInternal(std::complex<PrecisionT> *arr,
-                       const size_t num_qubits) {
-        RealProd prod{PrecisionAVXConcept::internalParity(rev_wire)};
-        prod *= ImagProd::repeat2(-1.0, -1.0).factor_;
-        using Permute0 = typename Permute<sizeof(typename PrecisionAVXConcept::IntrinsicType) / sizeof(PrecisionT)>::Type;
-        using Permute =  typename SwapRealImag<typename Flip<Permute0, rev_wire>::Type>::Type;
-        for (size_t k = 0; k < (1U << num_qubits);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+                              const size_t num_qubits) {
+        using namespace Permutation;
+        const auto factor = internalParity<PrecisionT, packed_size>(rev_wire) *
+                            (-imagFactor<PrecisionT, packed_size>());
+        constexpr static auto compiled_permutation =
+            compilePermutation<PrecisionT>(
+                swapRealImag(flip(identity<packed_size>(), rev_wire)));
+        for (size_t k = 0; k < (1U << num_qubits); k += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            const auto w = permuteIntrinsic<Permute>(v);
-            PrecisionAVXConcept::store(arr + k, prod.product(w));
+            const auto w =
+                permute<compiled_permutation.within_lane_,
+                        compiled_permutation.imm8_>(compiled_permutation, v);
+            PrecisionAVXConcept::store(arr + k, w * factor);
         }
     }
 
     static void applyExternal(std::complex<PrecisionT> *arr,
-                              const size_t num_qubits,
-                              const size_t rev_wire) {
+                              const size_t num_qubits, const size_t rev_wire) {
+        using namespace Permutation;
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        const auto m_imag_prod = ImagProd(-1.0);
-        const auto p_imag_prod = ImagProd(1.0);
+        constexpr static auto m_imag =
+            imagFactor<PrecisionT, packed_size>(-1.0);
+        constexpr static auto p_imag = imagFactor<PrecisionT, packed_size>(1.0);
 
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        constexpr static auto compiled_permutation =
+            compilePermutation<PrecisionT>(
+                swapRealImag(identity<packed_size>()));
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);
             const size_t i1 = i0 | rev_wire_shift;
 
             const auto v0 = PrecisionAVXConcept::load(arr + i0);
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
-            PrecisionAVXConcept::store(arr + i0, m_imag_prod.product(v1));
-            PrecisionAVXConcept::store(arr + i1, p_imag_prod.product(v0));
+            PrecisionAVXConcept::store(
+                arr + i0, m_imag * permute<compiled_permutation.within_lane_,
+                                           compiled_permutation.imm8_>(
+                                       compiled_permutation, v1));
+            PrecisionAVXConcept::store(
+                arr + i1, p_imag * permute<compiled_permutation.within_lane_,
+                                           compiled_permutation.imm8_>(
+                                       compiled_permutation, v0));
         }
     }
 };

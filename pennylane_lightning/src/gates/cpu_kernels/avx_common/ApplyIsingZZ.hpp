@@ -18,6 +18,7 @@
 #pragma once
 #include "AVXUtil.hpp"
 #include "BitUtil.hpp"
+#include "Permutation.hpp"
 #include "Util.hpp"
 
 #include <immintrin.h>
@@ -26,65 +27,65 @@
 
 namespace Pennylane::Gates::AVX {
 
-template <typename PrecisionT, template <typename> typename AVXConcept>
-struct ApplyIsingZZ {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
+template <typename PrecisionT, size_t packed_size> struct ApplyIsingZZ {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
+    constexpr static auto perm = Permutation::compilePermutation<PrecisionT>(
+        Permutation::swapRealImag(Permutation::identity<packed_size>()));
 
     template <class ParamT>
     static void applyInternalInternal(std::complex<PrecisionT> *arr,
-                               size_t num_qubits,
-                               [[maybe_unused]] size_t rev_wire0,
-                               [[maybe_unused]] size_t rev_wire1,
-                               bool inverse, ParamT angle) {
+                                      size_t num_qubits,
+                                      [[maybe_unused]] size_t rev_wire0,
+                                      [[maybe_unused]] size_t rev_wire1,
+                                      bool inverse, ParamT angle) {
         // This function is allowed for AVX512 and AVX2 with float
 
-        const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
-        const auto parity = PrecisionAVXConcept::mul(
-                PrecisionAVXConcept::internalParity(rev_wire0),
-                PrecisionAVXConcept::internalParity(rev_wire1));
-        const auto real_cos_factor = RealProd(std::cos(angle / 2));
-        auto imag_sin_factor = ImagProd(isin);
+        const double isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        const auto parity = toParity<PrecisionT, packed_size>([=](size_t idx) {
+            return ((idx >> rev_wire0) & 1U) ^ ((idx >> rev_wire1) & 1U);
+        });
+        const auto real_cos =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+        const auto imag_sin =
+            imagFactor<PrecisionT, packed_size>(isin) * parity;
 
-        imag_sin_factor *= parity;
-
-        for (size_t n = 0; n < exp2(num_qubits);
-             n += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t n = 0; n < exp2(num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);
 
-            const auto prod_cos = real_cos_factor.product(v);
-            const auto prod_sin = imag_sin_factor.product(v);
+            const auto prod_cos = real_cos * v;
+            const auto prod_sin =
+                imag_sin *
+                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v);
 
-            const auto w = PrecisionAVXConcept::add(prod_cos, prod_sin);
-            PrecisionAVXConcept::store(arr + n, w);
+            PrecisionAVXConcept::store(arr + n, prod_cos + prod_sin);
         }
     }
     template <class ParamT>
-    static void
-    applyInternalExternal(std::complex<PrecisionT> *arr, size_t num_qubits,
-                          size_t rev_wire0, size_t rev_wire1,
-                          bool inverse, ParamT angle) {
-        using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-
+    static void applyInternalExternal(std::complex<PrecisionT> *arr,
+                                      size_t num_qubits, size_t rev_wire0,
+                                      size_t rev_wire1, bool inverse,
+                                      ParamT angle) {
         const size_t rev_wire_min = std::min(rev_wire0, rev_wire1);
         const size_t rev_wire_max = std::max(rev_wire0, rev_wire1);
 
-        const size_t max_rev_wire_shift = (static_cast<size_t>(1U) << rev_wire_max);
+        const size_t max_rev_wire_shift =
+            (static_cast<size_t>(1U) << rev_wire_max);
         const size_t max_wire_parity = fillTrailingOnes(rev_wire_max);
         const size_t max_wire_parity_inv = fillLeadingOnes(rev_wire_max + 1);
 
-        const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
-        const auto real_cos_factor = RealProd(std::cos(angle / 2));
-        const auto imag_sin_factor = ImagProd(isin);
+        const double isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        const auto real_cos =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+        const auto imag_sin = imagFactor<PrecisionT, packed_size>(isin);
 
-        auto imag_sin_parity0 = imag_sin_factor;
-        imag_sin_parity0 *= PrecisionAVXConcept::internalParity(rev_wire_min);
-        auto imag_sin_parity1 = imag_sin_parity0;
-        imag_sin_parity1 *= -1.0;
+        const auto imag_sin_parity0 =
+            imag_sin * internalParity<PrecisionT, packed_size>(rev_wire_min);
+        const auto imag_sin_parity1 = imag_sin_parity0 * -1.0;
 
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 =
                 ((k << 1U) & max_wire_parity_inv) | (max_wire_parity & k);
             const size_t i1 = i0 | max_rev_wire_shift;
@@ -92,26 +93,27 @@ struct ApplyIsingZZ {
             const auto v0 = PrecisionAVXConcept::load(arr + i0);
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
-            const auto prod_cos0 = real_cos_factor.product(v0);
-            const auto prod_sin0 = imag_sin_parity0.product(v0);
+            const auto prod_cos0 = real_cos * v0;
+            const auto prod_sin0 =
+                imag_sin_parity0 *
+                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v0);
 
-            const auto prod_cos1 = real_cos_factor.product(v1);
-            const auto prod_sin1 = imag_sin_parity1.product(v1);
+            const auto prod_cos1 = real_cos * v1;
+            const auto prod_sin1 =
+                imag_sin_parity1 *
+                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v1);
 
-            PrecisionAVXConcept::store(arr + i0, PrecisionAVXConcept::add(prod_cos0, prod_sin0));
-            PrecisionAVXConcept::store(arr + i1, PrecisionAVXConcept::add(prod_cos1, prod_sin1));
+            PrecisionAVXConcept::store(arr + i0, prod_cos0 + prod_sin0);
+            PrecisionAVXConcept::store(arr + i1, prod_cos1 + prod_sin1);
         }
     }
 
     template <class ParamT>
-    static void applyExternalExternal(std::complex<PrecisionT> *arr,
-                                                   const size_t num_qubits,
-                                                   const size_t rev_wire0,
-                                                   const size_t rev_wire1,
-                                                   bool inverse,
-                                                   ParamT angle) {
-        using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-
+    static void
+    applyExternalExternal(std::complex<PrecisionT> *arr,
+                          const size_t num_qubits, const size_t rev_wire0,
+                          const size_t rev_wire1, bool inverse, ParamT angle) {
+        using namespace Permutation;
         const size_t rev_wire0_shift = static_cast<size_t>(1U) << rev_wire0;
         const size_t rev_wire1_shift = static_cast<size_t>(1U) << rev_wire1;
 
@@ -123,11 +125,14 @@ struct ApplyIsingZZ {
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-        const double isin = inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
+        const double isin =
+            inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
 
-        const auto real_cos_factor = RealProd(std::cos(angle / 2));
-        const auto p_isin_prod = ImagProd(isin);
-        const auto m_isin_prod = ImagProd(-isin);
+        const auto real_cos =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+
+        const auto p_isin = imagFactor<PrecisionT, packed_size>(isin);
+        const auto m_isin = imagFactor<PrecisionT, packed_size>(-isin);
 
         for (size_t k = 0; k < exp2(num_qubits - 2);
              k += PrecisionAVXConcept::step_for_complex_precision) {
@@ -142,22 +147,26 @@ struct ApplyIsingZZ {
             const auto v10 = PrecisionAVXConcept::load(arr + i10); // 10
             const auto v11 = PrecisionAVXConcept::load(arr + i11); // 11
 
-            const auto prod_cos00 = real_cos_factor.product(v00);
-            const auto prod_isin00 = p_isin_prod.product(v00);
+            const auto prod_cos00 = real_cos * v00;
+            const auto prod_isin00 =
+                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v00);
 
-            const auto prod_cos01 = real_cos_factor.product(v01);
-            const auto prod_isin01 = m_isin_prod.product(v01);
+            const auto prod_cos01 = real_cos * v01;
+            const auto prod_isin01 =
+                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v01);
 
-            const auto prod_cos10 = real_cos_factor.product(v10);
-            const auto prod_isin10 = m_isin_prod.product(v10);
+            const auto prod_cos10 = real_cos * v10;
+            const auto prod_isin10 =
+                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v10);
 
-            const auto prod_cos11 = real_cos_factor.product(v11);
-            const auto prod_isin11 = p_isin_prod.product(v11);
+            const auto prod_cos11 = real_cos * v11;
+            const auto prod_isin11 =
+                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v11);
 
-            PrecisionAVXConcept::store(arr + i00, PrecisionAVXConcept::add(prod_cos00, prod_isin00));
-            PrecisionAVXConcept::store(arr + i01, PrecisionAVXConcept::add(prod_cos01, prod_isin01));
-            PrecisionAVXConcept::store(arr + i10, PrecisionAVXConcept::add(prod_cos10, prod_isin10));
-            PrecisionAVXConcept::store(arr + i11, PrecisionAVXConcept::add(prod_cos11, prod_isin11));
+            PrecisionAVXConcept::store(arr + i00, prod_cos00 + prod_isin00);
+            PrecisionAVXConcept::store(arr + i01, prod_cos01 + prod_isin01);
+            PrecisionAVXConcept::store(arr + i10, prod_cos10 + prod_isin10);
+            PrecisionAVXConcept::store(arr + i11, prod_cos11 + prod_isin11);
         }
     }
 };

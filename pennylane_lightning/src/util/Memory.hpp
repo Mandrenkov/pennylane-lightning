@@ -86,11 +86,11 @@ bool operator!=([[maybe_unused]] const AlignedAllocator<T, alignment> &lhs,
  */
 template <typename TypeList> struct commonAlignmentHelper {
     constexpr static uint32_t value =
-        std::max(TypeList::Type::data_alignment_in_bytes,
+        std::max(TypeList::Type::packed_bytes,
                  commonAlignmentHelper<typename TypeList::Next>::value);
 };
 template <> struct commonAlignmentHelper<void> {
-    constexpr static uint32_t value = 1U;
+    constexpr static uint32_t value = 4U;
 };
 
 template <typename TypeList>
@@ -98,6 +98,6 @@ template <typename TypeList>
     commonAlignmentHelper<TypeList>::value;
 
 template <class T, uint32_t alignment>
-using PLAllocator = std::conditional_t<alignment == 1, std::allocator<T>,
+using PLAllocator = std::conditional_t<alignment == 4, std::allocator<T>,
                                        AlignedAllocator<T, alignment>>;
 } // namespace Pennylane
