@@ -72,9 +72,21 @@
 
 // Define force inline
 #if defined(__GNUC__) || defined(__clang__)
+#if NDEBUG
 #define PL_FORCE_INLINE __attribute__((always_inline))
+#else
+#define PL_FORCE_INLINE
+#endif
 #elif defined(_MSC_VER)
+#if NDEBUG
 #define PL_FORCE_INLINE __forceinline
 #else
+#define PL_FORCE_INLINE
+#endif
+#else
+#if NDEBUG
 #define PL_FORCE_INLINE inline
+#else
+#define PL_FORCE_INLINE
+#endif
 #endif

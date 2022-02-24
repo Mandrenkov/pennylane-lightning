@@ -41,9 +41,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyPauliY {
                 swapRealImag(flip(identity<packed_size>(), rev_wire)));
         for (size_t k = 0; k < (1U << num_qubits); k += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            const auto w =
-                permute<compiled_permutation.within_lane_,
-                        compiled_permutation.imm8_>(compiled_permutation, v);
+            const auto w = permute<compiled_permutation>(v);
             PrecisionAVXConcept::store(arr + k, w * factor);
         }
     }
@@ -69,13 +67,9 @@ template <typename PrecisionT, size_t packed_size> struct ApplyPauliY {
             const auto v0 = PrecisionAVXConcept::load(arr + i0);
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
             PrecisionAVXConcept::store(
-                arr + i0, m_imag * permute<compiled_permutation.within_lane_,
-                                           compiled_permutation.imm8_>(
-                                       compiled_permutation, v1));
+                arr + i0, m_imag * permute<compiled_permutation>(v1));
             PrecisionAVXConcept::store(
-                arr + i1, p_imag * permute<compiled_permutation.within_lane_,
-                                           compiled_permutation.imm8_>(
-                                       compiled_permutation, v0));
+                arr + i1, p_imag * permute<compiled_permutation>(v0));
         }
     }
 };

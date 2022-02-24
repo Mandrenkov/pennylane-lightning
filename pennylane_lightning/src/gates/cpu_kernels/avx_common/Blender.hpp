@@ -17,74 +17,91 @@
  */
 #pragma once
 #include "AVXUtil.hpp"
+#include "Macros.hpp"
 
 #include <immintrin.h>
 
 namespace Pennylane::Gates::AVX {
 
-template <typename PrecisionT, size_t num_packed> struct Blender {
+template <typename PrecisionT, size_t packed_size> struct CompileMask {
     static_assert(sizeof(PrecisionT) == -1,
                   "Unsupported type and/or packed size.");
 };
 
-template <> struct Blender<float, 8> {
+template <> struct CompileMask<float, 8> {
     // AVX2 with float
-    int imm8_ = 0;
-
-    constexpr explicit Blender(const Mask<8> &mask) {
-        imm8_ = 0;
+    constexpr static auto create(const std::array<bool, 8> &mask) -> int {
+        int imm8 = 0;
         for (uint8_t i = 0; i < 8; i++) {
-            imm8_ |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
+            imm8 |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
         }
-    }
-
-    template <typename T> __m256 blend(T &&a, T &&b) const {
-        return _mm256_blend_ps(std::forward<T>(a), std::forward<T>(b), imm8_);
+        return imm8;
     }
 };
-
-template <> struct Blender<double, 4> {
+template <> struct CompileMask<double, 4> {
     // AVX2 with double
-    int imm8_ = 0;
-    constexpr explicit Blender(const Mask<4> &mask) {
-        imm8_ = 0;
+    constexpr static auto create(const std::array<bool, 4> &mask) {
+        int imm8 = 0;
         for (uint8_t i = 0; i < 4; i++) {
-            imm8_ |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
+            imm8 |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
         }
-    }
-    template <typename T> __m256d blend(T &&a, T &&b) const {
-        return _mm256_blend_pd(std::forward<T>(a), std::forward<T>(b), imm8_);
+        return imm8;
     }
 };
-template <> struct Blender<float, 16> {
+template <> struct CompileMask<float, 16> {
     // AVX512 with float
-    __mmask16 k_;
-
-    explicit Blender(const Mask<16> &mask) {
-        uint16_t m = 0;
+    constexpr static auto create(const std::array<bool, 16> &mask) {
+        __mmask16 m = 0;
         for (uint8_t i = 0; i < 16; i++) {
             m |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
         }
-        k_ = m;
-    }
-    template <typename T> __m512 blend(T &&a, T &&b) const {
-        return _mm512_mask_blend_ps(k_, std::forward<T>(a), std::forward<T>(b));
+        return m;
     }
 };
-
-template <> struct Blender<double, 8> {
+template <> struct CompileMask<double, 8> {
     // AVX512 with double
-    __mmask8 k_;
-
-    explicit Blender(const Mask<8> &mask) {
-        uint8_t m = 0;
+    constexpr static auto create(const std::array<bool, 8> &mask) {
+        __mmask8 m = 0;
         for (uint8_t i = 0; i < 8; i++) {
             m |= int(mask[i]) << i; // NOLINT(hicpp-signed-bitwise)
         }
-        k_ = m;
-    }
-    template <typename T> __m512d blend(T &&a, T &&b) const {
-        return _mm512_mask_blend_pd(k_, std::forward<T>(a), std::forward<T>(b));
+        return m;
     }
 };
+
+constexpr int negate(int imm8) {
+    return 0B11111111 ^
+           imm8; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+}
+constexpr __mmask8 negate(__mmask8 m) {
+    return 0B11111111 ^
+           m; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+}
+constexpr __mmask16 negate(__mmask16 m) {
+    return 0B1111'1111'1111'1111 ^
+           m; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+}
+
+template <typename PrecisionT, size_t packed_size>
+constexpr static auto compileMask(const std::array<bool, packed_size> &mask) {
+    return CompileMask<PrecisionT, packed_size>::create(mask);
+}
+
+template <int imm8>
+PL_FORCE_INLINE __m256 blend(const __m256 &a, const __m256 &b) {
+    return _mm256_blend_ps(a, b, imm8);
+}
+template <int imm8>
+PL_FORCE_INLINE __m256d blend(const __m256d &a, const __m256d &b) {
+    return _mm256_blend_pd(a, b, imm8);
+}
+template <__mmask16 k>
+PL_FORCE_INLINE __m512 blend(const __m512 &a, const __m512 &b) {
+    return _mm512_mask_blend_ps(k, a, b);
+}
+template <__mmask8 k>
+PL_FORCE_INLINE __m512d blend(const __m512d &a, const __m512d &b) {
+    return _mm512_mask_blend_pd(k, a, b);
+}
+
 } // namespace Pennylane::Gates::AVX

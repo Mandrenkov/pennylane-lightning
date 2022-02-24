@@ -49,7 +49,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyRZ {
 
         for (size_t n = 0; n < (1U << num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);
-            const auto w = permute<perm.within_lane_, perm.imm8_>(perm, v);
+            const auto w = permute<perm>(v);
             PrecisionAVXConcept::store(arr + n,
                                        (real_cos * v) + (imag_sin * w));
         }
@@ -83,12 +83,10 @@ template <typename PrecisionT, size_t packed_size> struct ApplyRZ {
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
             const auto v0_cos = real_cos * v0;
-            const auto v0_isin =
-                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v0);
+            const auto v0_isin = p_isin * permute<perm>(v0);
 
             const auto v1_cos = real_cos * v1;
-            const auto v1_isin =
-                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v1);
+            const auto v1_isin = m_isin * permute<perm>(v1);
 
             PrecisionAVXConcept::store(arr + i0, v0_cos + v0_isin);
             PrecisionAVXConcept::store(arr + i1, v1_cos + v1_isin);

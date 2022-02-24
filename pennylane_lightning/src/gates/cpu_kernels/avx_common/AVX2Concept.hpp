@@ -16,6 +16,7 @@
  * Defines common AVX256 concept
  */
 #pragma once
+#include "AVXUtil.hpp"
 #include "BitUtil.hpp"
 #include "Macros.hpp"
 #include "Util.hpp"
@@ -379,4 +380,67 @@ template <typename T> struct AVX2Concept {
         }
     }
 };
+template <> struct AVXConcept<float, 8> { using Type = AVX2Concept<float>; };
+template <> struct AVXConcept<double, 4> { using Type = AVX2Concept<double>; };
+
+template <> struct InternalParity<float, 8> {
+    // AVX2 with float
+    constexpr static auto create(size_t rev_wire)
+        -> AVXIntrinsicType<float, 8> {
+        // clang-format off
+        switch(rev_wire) {
+        case 0:
+            return __m256{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
+        case 1:
+            return __m256{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F};
+        default:
+            PL_UNREACHABLE;
+        }
+        // clang-format on
+        return __m256{
+            0.0F,
+        };
+    }
+};
+template <> struct InternalParity<double, 4> {
+    // AVX2 with double
+    constexpr static auto create(size_t rev_wire)
+        -> AVXIntrinsicType<double, 4> {
+        // clang-format off
+        switch(rev_wire) {
+        case 0:
+            return __m256d{1.0, 1.0, -1.0, -1.0};
+        case 1:
+            return __m256d{1.0, 1.0, 1.0, 1.0};
+        default:
+            PL_UNREACHABLE;
+        }
+        // clang-format on
+        return __m256d{
+            0.0,
+        };
+    }
+};
+
+template <> struct ImagFactor<float, 8> {
+    constexpr static auto create(float val) -> AVXIntrinsicType<float, 8> {
+        return __m256{-val, val, -val, val, -val, val, -val, val};
+    };
+};
+template <> struct ImagFactor<double, 4> {
+    constexpr static auto create(double val) -> AVXIntrinsicType<double, 4> {
+        return __m256d{-val, val, -val, val};
+    };
+};
+template <> struct Set1<float, 8> {
+    constexpr static auto create(float val) -> AVXIntrinsicType<float, 8> {
+        return __m256{val, val, val, val, val, val, val, val};
+    }
+};
+template <> struct Set1<double, 4> {
+    constexpr static auto create(double val) -> AVXIntrinsicType<double, 4> {
+        return __m256d{val, val, val, val};
+    }
+};
+
 } // namespace Pennylane::Gates::AVX

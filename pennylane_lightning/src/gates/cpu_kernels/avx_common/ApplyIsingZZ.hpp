@@ -55,9 +55,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingZZ {
             const auto v = PrecisionAVXConcept::load(arr + n);
 
             const auto prod_cos = real_cos * v;
-            const auto prod_sin =
-                imag_sin *
-                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v);
+            const auto prod_sin = imag_sin * Permutation::permute<perm>(v);
 
             PrecisionAVXConcept::store(arr + n, prod_cos + prod_sin);
         }
@@ -95,13 +93,11 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingZZ {
 
             const auto prod_cos0 = real_cos * v0;
             const auto prod_sin0 =
-                imag_sin_parity0 *
-                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v0);
+                imag_sin_parity0 * Permutation::permute<perm>(v0);
 
             const auto prod_cos1 = real_cos * v1;
             const auto prod_sin1 =
-                imag_sin_parity1 *
-                Permutation::permute<perm.within_lane_, perm.imm8_>(perm, v1);
+                imag_sin_parity1 * Permutation::permute<perm>(v1);
 
             PrecisionAVXConcept::store(arr + i0, prod_cos0 + prod_sin0);
             PrecisionAVXConcept::store(arr + i1, prod_cos1 + prod_sin1);
@@ -148,20 +144,16 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingZZ {
             const auto v11 = PrecisionAVXConcept::load(arr + i11); // 11
 
             const auto prod_cos00 = real_cos * v00;
-            const auto prod_isin00 =
-                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v00);
+            const auto prod_isin00 = p_isin * permute<perm>(v00);
 
             const auto prod_cos01 = real_cos * v01;
-            const auto prod_isin01 =
-                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v01);
+            const auto prod_isin01 = m_isin * permute<perm>(v01);
 
             const auto prod_cos10 = real_cos * v10;
-            const auto prod_isin10 =
-                m_isin * permute<perm.within_lane_, perm.imm8_>(perm, v10);
+            const auto prod_isin10 = m_isin * permute<perm>(v10);
 
             const auto prod_cos11 = real_cos * v11;
-            const auto prod_isin11 =
-                p_isin * permute<perm.within_lane_, perm.imm8_>(perm, v11);
+            const auto prod_isin11 = p_isin * permute<perm>(v11);
 
             PrecisionAVXConcept::store(arr + i00, prod_cos00 + prod_isin00);
             PrecisionAVXConcept::store(arr + i01, prod_cos01 + prod_isin01);

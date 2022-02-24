@@ -18,6 +18,7 @@
 #pragma once
 #include "AVXUtil.hpp"
 #include "BitUtil.hpp"
+#include "Permutation.hpp"
 #include "Util.hpp"
 
 #include <immintrin.h>
@@ -26,120 +27,73 @@
 
 namespace Pennylane::Gates::AVX {
 
-template <typename PrecisionT, template <typename> class AVXConcept>
-struct SingleQubitOpProd {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
+template <typename PrecisionT, size_t packed_size> struct ApplySingleQubitOp {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
 
-    RealProd diag_real;
-    ImagProd diag_imag;
-    RealProd offdiag_real;
-    ImagProd offdiag_imag;
-};
-
-template <typename PrecisionT, template <typename> class AVXConcept,
-          size_t rev_wire>
-struct SingleQubitOpProdCreate {
-    static_assert(sizeof(PrecisionT) == -1, "Given rev_wire is not supported.");
-};
-
-template <typename PrecisionT, template <typename> class AVXConcept>
-struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 0> {
-    // rev_wire == 0
-    static auto create(bool inverse, const std::complex<PrecisionT> *matrix)
-        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
-        using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-        using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-
-        if (inverse) {
-            return {RealProd::repeat2(real(matrix[0]), real(matrix[3])),
-                    ImagProd::repeat2(-imag(matrix[0]), -imag(matrix[3])),
-                    RealProd::repeat2(real(matrix[2]), real(matrix[1])),
-                    ImagProd::repeat2(-imag(matrix[2]), -imag(matrix[1]))};
-        } // else
-        return {RealProd::repeat2(real(matrix[0]), real(matrix[3])),
-                ImagProd::repeat2(imag(matrix[0]), imag(matrix[3])),
-                RealProd::repeat2(real(matrix[1]), real(matrix[2])),
-                ImagProd::repeat2(imag(matrix[1]), imag(matrix[2]))};
-    }
-};
-template <typename PrecisionT, template <typename> class AVXConcept>
-struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 1> {
-    // rev_wire == 1
-    static auto create(bool inverse, const std::complex<PrecisionT> *matrix)
-        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
-        using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-        using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-
-        if (inverse) {
-            return {RealProd::repeat4(real(matrix[0]), real(matrix[3])),
-                    ImagProd::repeat4(-imag(matrix[0]), -imag(matrix[3])),
-                    RealProd::repeat4(real(matrix[2]), real(matrix[1])),
-                    ImagProd::repeat4(-imag(matrix[2]), -imag(matrix[1]))};
-        } // else
-        return {RealProd::repeat4(real(matrix[0]), real(matrix[3])),
-                ImagProd::repeat4(imag(matrix[0]), imag(matrix[3])),
-                RealProd::repeat4(real(matrix[1]), real(matrix[2])),
-                ImagProd::repeat4(imag(matrix[1]), imag(matrix[2]))};
-    }
-};
-
-template <typename PrecisionT, template <typename> class AVXConcept>
-struct SingleQubitOpProdCreate<PrecisionT, AVXConcept, 2> {
-    // rev_wire == 2
-    static auto create(bool inverse, const std::complex<PrecisionT> *matrix)
-        -> SingleQubitOpProd<PrecisionT, AVXConcept> {
-        using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-        using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-
-        if (inverse) {
-            return {RealProd::repeat8(real(matrix[0]), real(matrix[3])),
-                    ImagProd::repeat8(-imag(matrix[0]), -imag(matrix[3])),
-                    RealProd::repeat8(real(matrix[2]), real(matrix[1])),
-                    ImagProd::repeat8(-imag(matrix[2]), -imag(matrix[1]))};
-        } // else
-        return {RealProd::repeat8(real(matrix[0]), real(matrix[3])),
-                ImagProd::repeat8(imag(matrix[0]), imag(matrix[3])),
-                RealProd::repeat8(real(matrix[1]), real(matrix[2])),
-                ImagProd::repeat8(imag(matrix[1]), imag(matrix[2]))};
-    }
-};
-
-template <typename PrecisionT, template <typename> class AVXConcept,
-          size_t rev_wire>
-auto createSingleQubitOpProd(bool inverse,
-                             const std::complex<PrecisionT> *matrix) {
-    return SingleQubitOpProdCreate<PrecisionT, AVXConcept, rev_wire>::create(
-        inverse, matrix);
-}
-
-template <typename PrecisionT, template <typename> class AVXConcept>
-struct ApplySingleQubitOp {
     template <size_t rev_wire>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
                               const std::complex<PrecisionT> *matrix,
                               bool inverse = false) {
-        using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-        const auto [diag_real, diag_imag, offdiag_real, offdiag_imag] =
-            createSingleQubitOpProd<PrecisionT, AVXConcept, rev_wire>(inverse,
-                                                                      matrix);
+        using namespace Permutation;
 
-        for (size_t k = 0; k < exp2(num_qubits);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        const AVXIntrinsicType<PrecisionT, packed_size> diag_real =
+            setValueOneTwo<PrecisionT, packed_size>([=](size_t idx) {
+                return (((idx >> rev_wire) & 1U) == 0) ? real(matrix[0])
+                                                       : real(matrix[3]);
+            });
+        const AVXIntrinsicType<PrecisionT, packed_size> diag_imag =
+            setValueOneTwo<PrecisionT, packed_size>([=](size_t idx) {
+                if (inverse) {
+                    return (((idx >> rev_wire) & 1U) == 0) ? -imag(matrix[0])
+                                                           : -imag(matrix[3]);
+                } // else
+                return (((idx >> rev_wire) & 1U) == 0) ? imag(matrix[0])
+                                                       : imag(matrix[3]);
+            }) *
+            imagFactor<PrecisionT, packed_size>();
+        const AVXIntrinsicType<PrecisionT, packed_size> offdiag_real =
+            setValueOneTwo<PrecisionT, packed_size>([=](size_t idx) {
+                if (inverse) {
+                    return (((idx >> rev_wire) & 1U) == 0) ? real(matrix[2])
+                                                           : real(matrix[1]);
+                } // else
+                return (((idx >> rev_wire) & 1U) == 0) ? real(matrix[1])
+                                                       : real(matrix[2]);
+            });
+        const AVXIntrinsicType<PrecisionT, packed_size> offdiag_imag =
+            setValueOneTwo<PrecisionT, packed_size>([=](size_t idx) {
+                if (inverse) {
+                    return (((idx >> rev_wire) & 1U) == 0) ? -imag(matrix[2])
+                                                           : -imag(matrix[1]);
+                } // else
+                return (((idx >> rev_wire) & 1U) == 0) ? imag(matrix[1])
+                                                       : imag(matrix[2]);
+            }) *
+            imagFactor<PrecisionT, packed_size>();
+        ;
+
+        constexpr static auto flip_rev_wire = compilePermutation<PrecisionT>(
+            flip(identity<packed_size>(), rev_wire));
+        constexpr static auto swap_real_imag = compilePermutation<PrecisionT>(
+            swapRealImag(identity<packed_size>()));
+        constexpr static auto flip_swap_real_imag =
+            compilePermutation<PrecisionT>(
+                swapRealImag(flip(identity<packed_size>(), rev_wire)));
+
+        for (size_t k = 0; k < exp2(num_qubits); k += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + k);
-            const auto w_diag = PrecisionAVXConcept::add(diag_real.product(v),
-                                                         diag_imag.product(v));
+            const auto w_diag =
+                diag_real * v + diag_imag * permute<swap_real_imag>(v);
 
-            const auto v_off =
-                PrecisionAVXConcept::template internalSwap<rev_wire>(v);
+            const auto v_off_real = offdiag_real * permute<flip_rev_wire>(v);
 
-            const auto w_offdiag = PrecisionAVXConcept::add(
-                offdiag_real.product(v_off), offdiag_imag.product(v_off));
+            const auto v_off_imag =
+                offdiag_imag * permute<flip_swap_real_imag>(v);
 
-            PrecisionAVXConcept::store(
-                arr + k, AVXConcept<PrecisionT>::add(w_diag, w_offdiag));
+            PrecisionAVXConcept::store(arr + k,
+                                       w_diag + v_off_imag + v_off_real);
         }
     }
 
@@ -147,10 +101,7 @@ struct ApplySingleQubitOp {
                               const size_t num_qubits, const size_t rev_wire,
                               const std::complex<PrecisionT> *matrix,
                               bool inverse = false) {
-        using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-        using RealProd = typename PrecisionAVXConcept::RealProd;
-        using ImagProd = typename PrecisionAVXConcept::ImagProd;
-
+        using namespace Permutation;
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
@@ -172,17 +123,24 @@ struct ApplySingleQubitOp {
             u11 = matrix[3];
         }
 
-        const auto u00_real_prod = RealProd(real(u00));
-        const auto u00_imag_prod = ImagProd(imag(u00));
+        const auto u00_real = set1<PrecisionT, packed_size>(real(u00));
+        const auto u00_imag = set1<PrecisionT, packed_size>(imag(u00)) *
+                              imagFactor<PrecisionT, packed_size>();
 
-        const auto u01_real_prod = RealProd(real(u01));
-        const auto u01_imag_prod = ImagProd(imag(u01));
+        const auto u01_real = set1<PrecisionT, packed_size>(real(u01));
+        const auto u01_imag = set1<PrecisionT, packed_size>(imag(u01)) *
+                              imagFactor<PrecisionT, packed_size>();
 
-        const auto u10_real_prod = RealProd(real(u10));
-        const auto u10_imag_prod = ImagProd(imag(u10));
+        const auto u10_real = set1<PrecisionT, packed_size>(real(u10));
+        const auto u10_imag = set1<PrecisionT, packed_size>(imag(u10)) *
+                              imagFactor<PrecisionT, packed_size>();
 
-        const auto u11_real_prod = RealProd(real(u11));
-        const auto u11_imag_prod = ImagProd(imag(u11));
+        const auto u11_real = set1<PrecisionT, packed_size>(real(u11));
+        const auto u11_imag = set1<PrecisionT, packed_size>(imag(u11)) *
+                              imagFactor<PrecisionT, packed_size>();
+
+        constexpr static auto swap_real_imag = compilePermutation<PrecisionT>(
+            swapRealImag(identity<packed_size>()));
 
         for (size_t k = 0; k < exp2(num_qubits - 1);
              k += PrecisionAVXConcept::step_for_complex_precision) {
@@ -193,21 +151,17 @@ struct ApplySingleQubitOp {
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
             // w0 = u00 * v0 + u01 * v1
-            const auto w0_real = PrecisionAVXConcept::add(
-                u00_real_prod.product(v0), u01_real_prod.product(v1));
-            const auto w0_imag = PrecisionAVXConcept::add(
-                u00_imag_prod.product(v0), u01_imag_prod.product(v1));
+            const auto w0_real = u00_real * v0 + u01_real * v1;
+            const auto w0_imag = u00_imag * permute<swap_real_imag>(v0) +
+                                 u01_imag * permute<swap_real_imag>(v1);
 
             // w1 = u11 * v1 + u10 * v0
-            const auto w1_real = PrecisionAVXConcept::add(
-                u11_real_prod.product(v1), u10_real_prod.product(v0));
-            const auto w1_imag = PrecisionAVXConcept::add(
-                u11_imag_prod.product(v1), u10_imag_prod.product(v0));
+            const auto w1_real = u11_real * v1 + u10_real * v0;
+            const auto w1_imag = u11_imag * permute<swap_real_imag>(v1) +
+                                 u10_imag * permute<swap_real_imag>(v0);
 
-            PrecisionAVXConcept::store(
-                arr + i0, PrecisionAVXConcept::add(w0_real, w0_imag));
-            PrecisionAVXConcept::store(
-                arr + i1, PrecisionAVXConcept::add(w1_real, w1_imag));
+            PrecisionAVXConcept::store(arr + i0, w0_real + w0_imag);
+            PrecisionAVXConcept::store(arr + i1, w1_real + w1_imag);
         }
     }
 };

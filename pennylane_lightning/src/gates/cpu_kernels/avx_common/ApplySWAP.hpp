@@ -28,71 +28,85 @@
 
 namespace Pennylane::Gates::AVX {
 
-template <size_t num_packed, size_t xor_wire> struct PermuteSWAP;
+template <typename PrecisionT, size_t packed_size> struct ApplySWAP {
+    using PrecisionAVXConcept =
+        typename AVXConcept<PrecisionT, packed_size>::Type;
+    template <size_t rev_wire0, size_t rev_wire1> 
+    constexpr static auto swapPermutation() {
+        const auto identity_perm = Permutation::identity<packed_size>();
+        std::array<uint8_t, packed_size> perm = {
+            0,
+        };
 
-template <size_t num_packed> struct PermuteSWAP<num_packed, 1> {
-    using Type = typename Swap<typename Permute<num_packed>::Type, 0, 1>::Type;
-};
-template <size_t num_packed> struct PermuteSWAP<num_packed, 2> {
-    using Type = typename Swap<typename Permute<num_packed>::Type, 0, 2>::Type;
-};
-template <size_t num_packed> struct PermuteSWAP<num_packed, 3> {
-    using Type = typename Swap<typename Permute<num_packed>::Type, 1, 2>::Type;
-};
-
-template <typename PrecisionT, template <typename> typename AVXConcept>
-struct ApplySWAP {
-    using PrecisionAVXConcept = AVXConcept<PrecisionT>;
-    using RealProd = typename AVXConcept<PrecisionT>::RealProd;
-    using ImagProd = typename AVXConcept<PrecisionT>::ImagProd;
-
-    static void applyInternalInternal(std::complex<PrecisionT> *arr,
-                                      size_t num_qubits, size_t rev_wire0,
-                                      size_t rev_wire1) {
-        const size_t min_rev_wire = std::min(rev_wire0, rev_wire1);
-        const size_t max_rev_wire = std::max(rev_wire0, rev_wire1);
-
-        switch (min_rev_wire ^ max_rev_wire) {
-        case 1: // (0, 1)
-            break;
-        case 2: // (0, 2)
-            break;
-        case 3: // (1, 2)
-            break;
+        for (size_t i = 0; i < packed_size / 2; i++) {
+            // swap rev_wire1 and rev_wire0 bits
+            const size_t b = ((i >> rev_wire0) ^ (i >> rev_wire1)) & 1U;
+            const size_t j = i ^ ((b << rev_wire0) | (b << rev_wire1));
+            perm[2 * i + 0] = identity_perm[2 * j + 0];
+            perm[2 * i + 1] = identity_perm[2 * j + 1];
         }
+        return Permutation::compilePermutation<PrecisionT, packed_size>(perm);
+    }
 
-        for (size_t n = 0; n < exp2(num_qubits);
-             n += PrecisionAVXConcept::step_for_complex_precision) {
+    template <size_t rev_wire0, size_t rev_wire1>
+    static void applyInternalInternal(std::complex<PrecisionT> *arr,
+                                      size_t num_qubits) {
+        using namespace Permutation;
+        constexpr static auto perm = swapPermutation<rev_wire0, rev_wire1>();
+
+        for (size_t n = 0; n < exp2(num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);
-            PrecisionAVXConcept::store(arr + n, permuteIntrinsic<SWAP>(v));
+            PrecisionAVXConcept::store(arr + n, permute<perm>(v));
         }
     }
 
+    template <size_t min_rev_wire> constexpr static auto createMask0() {
+        std::array<bool, packed_size> m = {
+            false,
+        };
+        for (size_t i = 0; i < packed_size / 2; i++) {
+            if ((i & (1U << min_rev_wire)) != 0) {
+                m[2 * i + 0] = true;
+                m[2 * i + 1] = true;
+            } else {
+                m[2 * i + 0] = false;
+                m[2 * i + 1] = false;
+            }
+        }
+        return compileMask<PrecisionT, packed_size>(m);
+    }
+    template <size_t min_rev_wire> constexpr static auto createMask1() {
+        std::array<bool, packed_size> m = {
+            false,
+        };
+        for (size_t i = 0; i < packed_size / 2; i++) {
+            if ((i & (1U << min_rev_wire)) != 0) {
+                m[2 * i + 0] = false;
+                m[2 * i + 1] = false;
+            } else {
+                m[2 * i + 0] = true;
+                m[2 * i + 1] = true;
+            }
+        }
+        return compileMask<PrecisionT, packed_size>(m);
+    }
+
+    template <size_t min_rev_wire>
     static void applyInternalExternal(std::complex<PrecisionT> *arr,
-                                      size_t num_qubits, size_t rev_wire0,
-                                      size_t rev_wire1) {
-        const size_t min_rev_wire = std::min(rev_wire0, rev_wire1);
-        const size_t max_rev_wire = std::max(rev_wire0, rev_wire1);
+                                      size_t num_qubits, size_t max_rev_wire) {
+        using namespace Permutation;
 
         const size_t max_rev_wire_shift =
             (static_cast<size_t>(1U) << max_rev_wire);
         const size_t max_wire_parity = fillTrailingOnes(max_rev_wire);
         const size_t max_wire_parity_inv = fillLeadingOnes(max_rev_wire + 1);
 
-        Mask<2 * PrecisionAVXConcept::step_for_complex_precision> mask;
-        for (size_t i = 0; i < mask.size(); i++) {
-            if ((i & (1U << min_rev_wire)) != 0) {
-                mask[i] = 1U;
-            } else {
-                mask[i] = 0U;
-            }
-        }
-        const auto blender =
-            Blender<PrecisionT,
-                    2 * PrecisionAVXConcept::step_for_complex_precision>(mask);
+        constexpr static auto compiled_mask0 = createMask0<min_rev_wire>();
+        constexpr static auto compiled_mask1 = createMask1<min_rev_wire>();
+        constexpr static auto compiled_perm = compilePermutation<PrecisionT>(
+            flip(identity<packed_size>(), min_rev_wire));
 
-        for (size_t k = 0; k < exp2(num_qubits - 1);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 1); k += packed_size / 2) {
             const size_t i0 =
                 ((k << 1U) & max_wire_parity_inv) | (max_wire_parity & k);
             const size_t i1 = i0 | max_rev_wire_shift;
@@ -100,8 +114,11 @@ struct ApplySWAP {
             const auto v0 = PrecisionAVXConcept::load(arr + i0);
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
-            PrecisionAVXConcept::store(arr + i0, blender.blend(v1, v0));
-            PrecisionAVXConcept::store(arr + i1, blender.blend(v0, v1));
+            const auto w0 = maskPermute<compiled_perm, compiled_mask0>(v0, v1);
+            const auto w1 = maskPermute<compiled_perm, compiled_mask1>(v1, v0);
+
+            PrecisionAVXConcept::store(arr + i0, w0);
+            PrecisionAVXConcept::store(arr + i1, w1);
         }
     }
 
@@ -120,10 +137,7 @@ struct ApplySWAP {
         const size_t parity_middle =
             fillLeadingOnes(rev_wire_min + 1) & fillTrailingOnes(rev_wire_max);
 
-        const auto minus_one = RealProd(-1.0);
-
-        for (size_t k = 0; k < exp2(num_qubits - 2);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 2); k += packed_size / 2) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
             const size_t i01 = i00 | rev_wire0_shift;

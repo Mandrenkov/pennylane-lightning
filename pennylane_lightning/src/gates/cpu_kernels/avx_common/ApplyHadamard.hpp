@@ -49,9 +49,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyHadamard {
             const auto v = PrecisionAVXConcept::load(arr + k);
 
             const auto w_diag = mat_diag * v;
-            const auto v_offdiag =
-                permute<compiled_permutation.within_lane_,
-                        compiled_permutation.imm8_>(compiled_permutation, v);
+            const auto v_offdiag = permute<compiled_permutation>(v);
             const auto w_offdiag = mat_offdiag * v_offdiag;
             PrecisionAVXConcept::store(arr + k, w_diag + w_offdiag);
         }

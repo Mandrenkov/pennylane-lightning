@@ -91,6 +91,12 @@ test-cpp-omp:
 	cmake --build ./BuildTests --target runner
 	cmake --build ./BuildTests --target test
 
+test-cpp-avx2:
+	rm -rf ./BuildTests
+	cmake $(LIGHTNING_CPP_DIR) -BBuildTests -DBUILD_TESTS=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON
+	cmake --build ./BuildTests --target runner
+	cmake --build ./BuildTests --target test
+
 test-cpp-avx512:
 	rm -rf ./BuildTests
 	cmake $(LIGHTNING_CPP_DIR) -BBuildTests -DBUILD_TESTS=ON -DENABLE_AVX=ON -DENABLE_AVX2=ON -DENABLE_AVX512=ON

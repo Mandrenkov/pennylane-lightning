@@ -16,6 +16,7 @@
  * Defines common AVX512 concept
  */
 #pragma once
+#include "AVXUtil.hpp"
 #include "BitUtil.hpp"
 #include "Macros.hpp"
 #include "Util.hpp"
@@ -454,15 +455,9 @@ template <typename T> struct AVX512Concept {
             } else if (rev_wire == 1) {
                 return _mm512_permutexvar_ps(
                     // NOLINTNEXTLINE(readability-magic-numbers)
-                    _mm512_set_epi32(
-                        11, 10, 9, 8,
-                        // NOLINTNEXTLINE(readability-magic-numbers)
-                        15, 14, 13, 12,
-                        // NOLINTNEXTLINE(readability-magic-numbers)
-                        3, 2, 1, 0,
-                        // NOLINTNEXTLINE(readability-magic-numbers)
-                        7, 6, 5, 4),
-                    v);
+                    _mm512_set_epi32(11, 10, 9, 8, 15, 14, 13, 12, 3, 2, 1, 0,
+                                     7, 6, 5, 4),
+                    v); // NOLINT(readability-magic-numbers)
                 // NOLINT(readability-magic-numbers)
             } else { // rev_wire == 2
                 return _mm512_permutexvar_ps(
@@ -471,7 +466,7 @@ template <typename T> struct AVX512Concept {
                         7, 6, 5, 4, 3, 2, 1, 0,
                         // NOLINTNEXTLINE(readability-magic-numbers)
                         15, 14, 13, 12, 11, 10, 9, 8),
-                    v);
+                    v); // NOLINT(readability-magic-numbers)
             }
         } else if (std::is_same_v<PrecisionT, double>) {
             if constexpr (rev_wire == 0) {
@@ -487,4 +482,79 @@ template <typename T> struct AVX512Concept {
         }
     }
 };
+
+template <> struct AVXConcept<float, 16> { using Type = AVX512Concept<float>; };
+template <> struct AVXConcept<double, 8> {
+    using Type = AVX512Concept<double>;
+};
+template <> struct InternalParity<float, 16> {
+    // AVX2 with float
+    constexpr static auto create(size_t rev_wire)
+        -> AVXIntrinsicType<float, 16> {
+        // clang-format off
+        switch(rev_wire) {
+        case 0:
+            return __m512{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F,
+                          1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
+        case 1:
+            return __m512{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F,
+                          1.0F, 1.0F, 1.0F, 1.0F, -1.0F,- 1.0F, -1.0F, -1.0F};
+        case 2:
+            return __m512{ 1.0F,  1.0F,  1.0F,  1.0F,
+                           1.0F,  1.0F,  1.0F,  1.0F,
+                          -1.0F, -1.0F, -1.0F, -1.0F,
+                          -1.0F,- 1.0F, -1.0F, -1.0F};
+        default:
+            PL_UNREACHABLE;
+        }
+        // clang-format on
+        return __m512{
+            0,
+        };
+    }
+};
+
+template <> struct InternalParity<double, 8> {
+    // AVX2 with float
+    constexpr static auto create(size_t rev_wire)
+        -> AVXIntrinsicType<double, 8> {
+        // clang-format off
+        switch(rev_wire) {
+        case 0:
+            return __m512d{1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0};
+        case 1:
+            return __m512d{1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0};
+        default:
+            PL_UNREACHABLE;
+        }
+        // clang-format on
+        return __m512d{
+            0,
+        };
+    }
+};
+template <> struct ImagFactor<float, 16> {
+    constexpr static auto create(float val) -> AVXIntrinsicType<float, 16> {
+        return __m512{-val, val, -val, val, -val, val, -val, val,
+                      -val, val, -val, val, -val, val, -val, val};
+    };
+};
+template <> struct ImagFactor<double, 8> {
+    constexpr static auto create(double val) -> AVXIntrinsicType<double, 8> {
+        return __m512d{-val, val, -val, val, -val, val, -val, val};
+    };
+};
+
+template <> struct Set1<float, 16> {
+    constexpr static auto create(float val) -> AVXIntrinsicType<float, 16> {
+        return __m512{val, val, val, val, val, val, val, val,
+                      val, val, val, val, val, val, val, val};
+    }
+};
+template <> struct Set1<double, 8> {
+    constexpr static auto create(double val) -> AVXIntrinsicType<double, 8> {
+        return __m512d{val, val, val, val, val, val, val, val};
+    }
+};
+
 } // namespace Pennylane::Gates::AVX
