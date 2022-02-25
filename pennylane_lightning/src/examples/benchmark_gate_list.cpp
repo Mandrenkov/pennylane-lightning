@@ -76,6 +76,7 @@ parseGateLists(std::string_view arg) {
     }
     return ops;
 }
+
 /**
  * @brief Benchmark Pennylane-Lightning for a given gate set
  *
