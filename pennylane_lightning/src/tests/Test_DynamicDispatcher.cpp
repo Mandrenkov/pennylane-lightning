@@ -36,7 +36,6 @@ struct testDispatchForKernel {
             Util::array_has_elt(GateImplementation::implemented_gates, gate_op),
             bool> = true>
     static void test(RandomEngine &re, size_t num_qubits) {
-        using CFP_t = std::complex<PrecisionT>;
         const auto ini_st = createRandomState<PrecisionT>(re, num_qubits);
         auto expected = ini_st;
 

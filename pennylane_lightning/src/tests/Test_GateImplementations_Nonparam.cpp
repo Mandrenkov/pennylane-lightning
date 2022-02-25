@@ -138,7 +138,6 @@ PENNYLANE_RUN_TEST(PauliZ);
 
 template <typename PrecisionT, class GateImplementation>
 void testApplyHadamard() {
-    using ComplexPrecisionT = std::complex<PrecisionT>;
     const size_t num_qubits = 3;
     for (size_t index = 0; index < num_qubits; index++) {
         auto st = createZeroState<PrecisionT>(num_qubits);

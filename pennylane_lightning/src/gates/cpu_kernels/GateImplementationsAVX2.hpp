@@ -22,6 +22,7 @@
 
 #include "avx_common/ApplyCZ.hpp"
 #include "avx_common/ApplyHadamard.hpp"
+#include "avx_common/ApplyIsingXX.hpp"
 #include "avx_common/ApplyIsingZZ.hpp"
 #include "avx_common/ApplyPauliX.hpp"
 #include "avx_common/ApplyPauliY.hpp"
@@ -523,6 +524,65 @@ class GateImplementationsAVX2 {
                           "Only float and double are supported.");
         }
     }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyIsingXX(std::complex<PrecisionT> *arr,
+                             const size_t num_qubits,
+                             const std::vector<size_t> &wires,
+                             [[maybe_unused]] bool inverse, ParamT angle) {
+        assert(wires.size() == 2);
+
+        using ApplyIsingXXAVX2 =
+            AVX::ApplyIsingXX<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
+
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            if (num_qubits < 2) {
+                GateImplementationsLM::applyIsingXX(arr, num_qubits, wires,
+                                                    inverse, angle);
+                return;
+            }
+            const size_t rev_wire0 = num_qubits - wires[1] - 1;
+            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+            const size_t min_rev_wire = std::min(rev_wire0, rev_wire1);
+            const size_t max_rev_wire = std::max(rev_wire0, rev_wire1);
+
+            if (rev_wire0 < 2 && rev_wire1 < 2) {
+                ApplyIsingXXAVX2::template applyInternalInternal<0, 1>(
+                    arr, num_qubits, inverse, angle);
+            } else if (min_rev_wire < 2) {
+                if (min_rev_wire == 0) {
+                    ApplyIsingXXAVX2::template applyInternalExternal<0>(
+                        arr, num_qubits, max_rev_wire, inverse, angle);
+                } else {
+                    ApplyIsingXXAVX2::template applyInternalExternal<1>(
+                        arr, num_qubits, max_rev_wire, inverse, angle);
+                }
+            } else {
+                ApplyIsingXXAVX2::applyExternalExternal(
+                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire0 = num_qubits - wires[1] - 1;
+            const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
+            const size_t min_rev_wire = std::min(rev_wire0, rev_wire1);
+            const size_t max_rev_wire = std::max(rev_wire0, rev_wire1);
+
+            if (min_rev_wire == 0) {
+                ApplyIsingXXAVX2::template applyInternalExternal<0>(
+                    arr, num_qubits, max_rev_wire, inverse, angle);
+            } else {
+                ApplyIsingXXAVX2::applyExternalExternal(
+                    arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                              std::is_same_v<PrecisionT, double>,
+                          "Only float and double are supported.");
+        }
+    }
+
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyIsingZZ(std::complex<PrecisionT> *arr,
                              const size_t num_qubits,
@@ -541,6 +601,7 @@ class GateImplementationsAVX2 {
             }
             const size_t rev_wire0 = num_qubits - wires[1] - 1;
             const size_t rev_wire1 = num_qubits - wires[0] - 1; // Control qubit
+
             if (rev_wire0 < 2 && rev_wire1 < 2) {
                 ApplyIsingZZAVX2::applyInternalInternal(
                     arr, num_qubits, rev_wire0, rev_wire1, inverse, angle);
@@ -568,6 +629,7 @@ class GateImplementationsAVX2 {
                           "Only float and double are supported.");
         }
     }
+    
     template <class PrecisionT, class ParamT = PrecisionT>
     static void
     applySWAP(std::complex<PrecisionT> *arr, const size_t num_qubits,

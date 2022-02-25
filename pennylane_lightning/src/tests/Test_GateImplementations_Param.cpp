@@ -372,7 +372,7 @@ void testApplyIsingXX() {
                     << ", IsingXX0,2 - "
                     << PrecisionToName<PrecisionT>::value) {
         const size_t num_qubits = 3;
-        std::vector<ComplexPrecisionT> ini_st{
+        const auto ini_st = TestVector<ComplexPrecisionT>{
             ComplexPrecisionT{0.125681356503, 0.252712197380},
             ComplexPrecisionT{0.262591068130, 0.370189000494},
             ComplexPrecisionT{0.129300299863, 0.371057794075},
