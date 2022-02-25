@@ -130,8 +130,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingZZ {
         const auto p_isin = imagFactor<PrecisionT, packed_size>(isin);
         const auto m_isin = imagFactor<PrecisionT, packed_size>(-isin);
 
-        for (size_t k = 0; k < exp2(num_qubits - 2);
-             k += PrecisionAVXConcept::step_for_complex_precision) {
+        for (size_t k = 0; k < exp2(num_qubits - 2); k += packed_size / 2) {
             const size_t i00 = ((k << 2U) & parity_high) |
                                ((k << 1U) & parity_middle) | (k & parity_low);
             const size_t i10 = i00 | rev_wire1_shift;

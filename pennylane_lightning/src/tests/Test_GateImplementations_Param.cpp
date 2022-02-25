@@ -164,7 +164,7 @@ void testApplyRY() {
             {0.10575112905629831, -0.47593196040758534},
             {-0.8711876098966215, -0.0577721051072477}}};
 
-    const std::vector<ComplexPrecisionT> init_state{
+    const TestVector<ComplexPrecisionT> init_state{
         {0.8775825618903728, 0.0}, {0.0, -0.47942553860420306}};
     DYNAMIC_SECTION(GateImplementation::name
                     << ", RY - " << PrecisionToName<PrecisionT>::value) {

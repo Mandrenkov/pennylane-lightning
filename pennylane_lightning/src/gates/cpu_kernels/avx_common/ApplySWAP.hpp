@@ -31,7 +31,7 @@ namespace Pennylane::Gates::AVX {
 template <typename PrecisionT, size_t packed_size> struct ApplySWAP {
     using PrecisionAVXConcept =
         typename AVXConcept<PrecisionT, packed_size>::Type;
-    template <size_t rev_wire0, size_t rev_wire1> 
+    template <size_t rev_wire0, size_t rev_wire1>
     constexpr static auto swapPermutation() {
         const auto identity_perm = Permutation::identity<packed_size>();
         std::array<uint8_t, packed_size> perm = {

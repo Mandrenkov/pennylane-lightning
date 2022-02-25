@@ -1,5 +1,7 @@
-#include "OpToMemberFuncPtr.hpp"
+#include "CreateAllWires.hpp"
 #include "TestHelpers.hpp"
+
+#include "OpToMemberFuncPtr.hpp"
 #include "TestKernels.hpp"
 #include "Util.hpp"
 
@@ -36,68 +38,6 @@ template <typename TypeList> std::string kernelsToString() {
         }
         return std::string(TypeList::Type::name);
     }
-}
-
-class CombinationGenerator {
-  private:
-    std::vector<size_t> v_;
-    std::vector<std::vector<size_t>> all_perms_;
-
-  public:
-    void comb(size_t n, size_t r) {
-        if (r == 0) {
-            all_perms_.push_back(v_);
-            return;
-        }
-        if (n < r) {
-            return;
-        }
-
-        v_[r - 1] = n - 1;
-        comb(n - 1, r - 1);
-
-        comb(n - 1, r);
-    }
-
-    CombinationGenerator(size_t n, size_t r) {
-        v_.resize(r);
-        comb(n, r);
-    }
-
-    const std::vector<std::vector<size_t>> &all_perms() { return all_perms_; }
-};
-
-/**
- * @brief Create all possible combination of wires
- * for a given number of qubits and gate operation
- *
- * @param n_qubits Number of qubits
- * @param gate_op Gate operation
- */
-auto crateAllWires(size_t n_qubits, GateOperation gate_op)
-    -> std::vector<std::vector<size_t>> {
-
-    if (array_has_elt(Constant::multi_qubit_gates, gate_op)) {
-        // make all possible permutations
-        std::vector<std::vector<size_t>> res;
-        res.reserve((1U << n_qubits) - 1);
-        ;
-        for (size_t k = 1; k < (1U << n_qubits); k++) {
-            std::vector<size_t> wires;
-            wires.reserve(Util::popcount(k));
-
-            for (size_t i = 0; i < n_qubits; i++) {
-                if (((k >> i) & 1) == 1) {
-                    wires.emplace_back(i);
-                }
-            }
-
-            res.push_back(wires);
-        }
-        return res;
-    } // else
-    const size_t n_wires = Util::lookup(Constant::gate_wires, gate_op);
-    return CombinationGenerator(n_qubits, n_wires).all_perms();
 }
 
 /* Type transformation */
@@ -160,18 +100,34 @@ void testApplyGate(RandomEngine &re, size_t num_qubits) {
                                  << PrecisionToName<ParamT>::value);
 
     if constexpr (gate_op != GateOperation::Matrix) {
-        const auto all_wires = crateAllWires(num_qubits, gate_op);
+        const auto all_wires = crateAllWires(num_qubits, gate_op, true);
         for (const auto &wires : all_wires) {
             const auto params = createParams<ParamT>(gate_op);
+            const auto gate_name = lookup(Constant::gate_names, gate_op);
+            DYNAMIC_SECTION("Test gate " << gate_name << 
+                            " with inverse = false") { // Test with inverse = false
+                const auto results = Util::tuple_to_array(
+                    applyGateForImplemetingKernels<gate_op, PrecisionT, ParamT,
+                                                   Kernels>(
+                        ini, num_qubits, wires, false, params,
+                        std::make_index_sequence<length<Kernels>()>()));
 
-            const auto results = Util::tuple_to_array(
-                applyGateForImplemetingKernels<gate_op, PrecisionT, ParamT,
-                                               Kernels>(
-                    ini, num_qubits, wires, false, params,
-                    std::make_index_sequence<length<Kernels>()>()));
+                for (size_t i = 0; i < results.size() - 1; i++) {
+                    REQUIRE(results[i] == PLApprox(results[i + 1]).margin(1e-7));
+                }
+            }
 
-            for (size_t i = 0; i < results.size() - 1; i++) {
-                REQUIRE(results[i] == PLApprox(results[i + 1]).margin(1e-7));
+            DYNAMIC_SECTION("Test gate " << gate_name << 
+                            " with inverse = true") { // Test with inverse = true
+                const auto results = Util::tuple_to_array(
+                    applyGateForImplemetingKernels<gate_op, PrecisionT, ParamT,
+                                                   Kernels>(
+                        ini, num_qubits, wires, true, params,
+                        std::make_index_sequence<length<Kernels>()>()));
+
+                for (size_t i = 0; i < results.size() - 1; i++) {
+                    REQUIRE(results[i] == PLApprox(results[i + 1]).margin(1e-7));
+                }
             }
         }
     }

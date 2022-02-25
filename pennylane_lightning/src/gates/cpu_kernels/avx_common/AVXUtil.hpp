@@ -98,7 +98,7 @@ template<class PrecisionT, size_t packed_size>
 using AVXConceptType = typename AVXConcept<PrecisionT, packed_size>::Type;
 
 template<typename PrecisionT, size_t packed_size, typename Func>
-static auto toParity(Func&& func) -> decltype(auto) {
+auto toParity(Func&& func) -> decltype(auto) {
     std::array<PrecisionT, packed_size>
         data = {};
     for(size_t idx = 0; idx < packed_size / 2; idx++) {
@@ -108,10 +108,9 @@ static auto toParity(Func&& func) -> decltype(auto) {
     return AVXConceptType<PrecisionT, packed_size>::loadu(data.data());
 }
 template<typename PrecisionT, size_t packed_size, typename Func>
-static auto setValueOneTwo(Func&& func)
+auto setValueOneTwo(Func&& func)
     -> decltype(auto) {
-    std::array<PrecisionT, packed_size>
-        data = {};
+    std::array<PrecisionT, packed_size> data = {0, };
     for(size_t idx = 0; idx < packed_size / 2; idx++) {
         data[2*idx +0] = func(idx);
         data[2*idx +1] = func(idx);
@@ -122,18 +121,86 @@ static auto setValueOneTwo(Func&& func)
 /**
  * @brief one or minus one parity for reverse wire in packed data.
  */
-template<typename PrecisionT, size_t packed_size>
-struct InternalParity;
-
 template <typename PrecisionT, size_t packed_size>
-constexpr auto internalParity(size_t rev_wire)
-    -> AVXIntrinsicType<PrecisionT, packed_size> {
-    return InternalParity<PrecisionT, packed_size>::create(rev_wire);
+constexpr auto internalParity(size_t rev_wire) -> AVXIntrinsicType<PrecisionT, packed_size>;
+
+template<>
+constexpr auto internalParity<float, 8>(size_t rev_wire) -> __m256 {
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m256{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
+    case 1:
+        return __m256{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return _mm256_setzero_ps();
+}
+template <>
+constexpr auto internalParity<double, 4>(size_t rev_wire) -> __m256d {
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m256d{1.0, 1.0, -1.0, -1.0};
+    case 1:
+        return __m256d{1.0, 1.0, 1.0, 1.0};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return _mm256_setzero_pd();
+}
+
+template <>
+constexpr auto internalParity<float, 16>(size_t rev_wire) -> __m512 {
+    // AVX2 with float
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m512{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F,
+                      1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
+    case 1:
+        return __m512{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F,
+                      1.0F, 1.0F, 1.0F, 1.0F, -1.0F,- 1.0F, -1.0F, -1.0F};
+    case 2:
+        return __m512{ 1.0F,  1.0F,  1.0F,  1.0F,
+                       1.0F,  1.0F,  1.0F,  1.0F,
+                      -1.0F, -1.0F, -1.0F, -1.0F,
+                      -1.0F,- 1.0F, -1.0F, -1.0F};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return __m512{
+        0,
+    };
+};
+
+template <>
+constexpr auto internalParity<double, 8>(size_t rev_wire) -> __m512d {
+    // AVX2 with float
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m512d{1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0};
+    case 1:
+        return __m512d{1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return __m512d{
+        0,
+    };
 }
 
 /**
  * @brief Factor that is applied to the intrinsic type for product of
  * pure imaginary value.
+ *
+ * Template specializations are defined in each AVX(2|512)Concept.hpp file.
  */
 template <typename PrecisionT, size_t packed_size> struct ImagFactor;
 
@@ -149,8 +216,7 @@ constexpr auto set1(PrecisionT val) {
     return Set1<PrecisionT, packed_size>::create(val);
 }
 
-template <size_t packed_size>
-struct InternalWires {
+template <size_t packed_size> struct InternalWires {
     constexpr static auto value = Util::constLog2PerfectPower(packed_size);
 };
 template <size_t packed_size>

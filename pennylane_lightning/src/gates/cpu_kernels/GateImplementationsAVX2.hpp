@@ -26,13 +26,13 @@
 #include "avx_common/ApplyPauliX.hpp"
 #include "avx_common/ApplyPauliY.hpp"
 #include "avx_common/ApplyPauliZ.hpp"
+#include "avx_common/ApplyRX.hpp"
+#include "avx_common/ApplyRY.hpp"
 #include "avx_common/ApplyRZ.hpp"
+#include "avx_common/ApplyS.hpp"
 #include "avx_common/ApplySWAP.hpp"
 #include "avx_common/ApplySingleQubitOp.hpp"
-/*
-#include "avx_common/ApplyS.hpp"
-*/
-#include "BitUtil.hpp"
+
 #include "Error.hpp"
 #include "GateImplementationsLM.hpp"
 #include "GateOperation.hpp"
@@ -59,11 +59,11 @@ class GateImplementationsAVX2 {
         GateOperation::PauliY,
         GateOperation::PauliZ,
         GateOperation::Hadamard,
-        /*
         GateOperation::S,
-        */
         GateOperation::SWAP,
-        /* T, RX, RY, PhaseShift, SWAP, IsingXX, IsingYY */
+        /* T, PhaseShift, IsingXX, IsingYY */
+        GateOperation::RX,
+        GateOperation::RY,
         GateOperation::RZ,
         GateOperation::Rot,
         GateOperation::CZ,
@@ -256,13 +256,12 @@ class GateImplementationsAVX2 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
-    /*
     template <class PrecisionT>
-    static void applyS(std::complex<PrecisionT> *arr,
-                       const size_t num_qubits,
+    static void applyS(std::complex<PrecisionT> *arr, const size_t num_qubits,
                        const std::vector<size_t> &wires,
                        [[maybe_unused]] bool inverse) {
-        using ApplySAVX2 = AVX::ApplyS<PrecisionT, AVXConcept>;
+        using ApplySAVX2 =
+            AVX::ApplyS<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
         assert(wires.size() == 1);
 
         if constexpr (std::is_same_v<PrecisionT, float>) {
@@ -295,7 +294,6 @@ class GateImplementationsAVX2 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
-    */
 
     template <class PrecisionT>
     static void applyHadamard(std::complex<PrecisionT> *arr,
@@ -331,6 +329,96 @@ class GateImplementationsAVX2 {
                 ApplyHadamardAVX2::template applyInternal<0>(arr, num_qubits);
             } else {
                 ApplyHadamardAVX2::applyExternal(arr, num_qubits, rev_wire);
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyRX(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                        const std::vector<size_t> &wires, bool inverse,
+                        ParamT angle) {
+        using ApplyRXAVX2 =
+            AVX::ApplyRX<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
+        assert(wires.size() == 1);
+
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            if (num_qubits < 2) {
+                GateImplementationsLM::applyRX(arr, num_qubits, wires, inverse,
+                                               angle);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                ApplyRXAVX2::template applyInternal<0>(arr, num_qubits, inverse,
+                                                       angle);
+                return;
+            case 1:
+                ApplyRXAVX2::template applyInternal<1>(arr, num_qubits, inverse,
+                                                       angle);
+                return;
+            default:
+                ApplyRXAVX2::applyExternal(arr, num_qubits, rev_wire, inverse,
+                                           angle);
+            }
+
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+            if (rev_wire == 0) {
+                ApplyRXAVX2::template applyInternal<0>(arr, num_qubits, inverse,
+                                                       angle);
+            } else {
+                ApplyRXAVX2::applyExternal(arr, num_qubits, rev_wire, inverse,
+                                           angle);
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyRY(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                        const std::vector<size_t> &wires, bool inverse,
+                        ParamT angle) {
+        using ApplyRYAVX2 =
+            AVX::ApplyRY<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
+        assert(wires.size() == 1);
+
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            if (num_qubits < 2) {
+                GateImplementationsLM::applyRY(arr, num_qubits, wires, inverse,
+                                               angle);
+                return;
+            }
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                ApplyRYAVX2::template applyInternal<0>(arr, num_qubits, inverse,
+                                                       angle);
+                return;
+            case 1:
+                ApplyRYAVX2::template applyInternal<1>(arr, num_qubits, inverse,
+                                                       angle);
+                return;
+            default:
+                ApplyRYAVX2::applyExternal(arr, num_qubits, rev_wire, inverse,
+                                           angle);
+            }
+
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+            if (rev_wire == 0) {
+                ApplyRYAVX2::template applyInternal<0>(arr, num_qubits, inverse,
+                                                       angle);
+            } else {
+                ApplyRYAVX2::applyExternal(arr, num_qubits, rev_wire, inverse,
+                                           angle);
             }
         } else {
             static_assert(std::is_same_v<PrecisionT, float> ||
@@ -382,6 +470,7 @@ class GateImplementationsAVX2 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
+
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRot(std::complex<PrecisionT> *arr, const size_t num_qubits,
                          const std::vector<size_t> &wires, bool inverse,
@@ -394,6 +483,7 @@ class GateImplementationsAVX2 {
 
         applySingleQubitOp(arr, num_qubits, rotMat.data(), wires[0]);
     }
+
     /* Two-qubit gates*/
     template <class PrecisionT>
     static void applyCZ(std::complex<PrecisionT> *arr, const size_t num_qubits,

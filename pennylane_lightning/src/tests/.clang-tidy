@@ -1,5 +1,5 @@
 ---
-Checks:          'clang-diagnostic-*,clang-analyzer-*,-*,-llvmlibc-*,modernize-*,-modernize-use-trailing-return-type,clang-analyzer-cplusplus*,openmp-*,performance-*,portability-*,readability-*,-readability-magic-numbers,-modernize-avoid-c-arrays,-portability-simd-intrinsics'
+Checks:          'clang-diagnostic-*,clang-analyzer-*,-*,-llvmlibc-*,modernize-*,-modernize-use-trailing-return-type,clang-analyzer-cplusplus*,openmp-*,performance-*,portability-*,readability-*,-readability-magic-numbers,-modernize-avoid-c-arrays'
 WarningsAsErrors: '*'
 HeaderFilterRegex: '.*'
 AnalyzeTemporaryDtors: false

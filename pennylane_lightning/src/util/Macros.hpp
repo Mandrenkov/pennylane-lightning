@@ -73,7 +73,7 @@
 // Define force inline
 #if defined(__GNUC__) || defined(__clang__)
 #if NDEBUG
-#define PL_FORCE_INLINE __attribute__((always_inline))
+#define PL_FORCE_INLINE __attribute__((always_inline)) inline
 #else
 #define PL_FORCE_INLINE
 #endif

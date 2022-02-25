@@ -70,16 +70,13 @@ template <> struct CompileMask<double, 8> {
 };
 
 constexpr int negate(int imm8) {
-    return 0B11111111 ^
-           imm8; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+    return 0B11111111 ^ imm8; // NOLINT
 }
 constexpr __mmask8 negate(__mmask8 m) {
-    return 0B11111111 ^
-           m; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+    return 0B11111111 ^ m; // NOLINT
 }
 constexpr __mmask16 negate(__mmask16 m) {
-    return 0B1111'1111'1111'1111 ^
-           m; // NOLINT(hicpp-signed-bitwise,readability-magic-numbers)
+    return 0B1111'1111'1111'1111 ^ m; // NOLINT
 }
 
 template <typename PrecisionT, size_t packed_size>
