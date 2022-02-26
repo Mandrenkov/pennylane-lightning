@@ -36,7 +36,7 @@ option(ENABLE_WARNINGS "Enable warnings" ON)
 option(ENABLE_NATIVE "Enable native CPU build tuning" OFF)
 option(ENABLE_AVX "Enable AVX support" OFF)
 option(ENABLE_AVX2 "Enable AVX2 support" OFF)
-option(ENABLE_AVX512F "Enable AVX512F support" OFF)
+option(ENABLE_AVX512 "Enable AVX512 support" OFF)
 option(ENABLE_OPENMP "Enable OpenMP" ON)
 option(ENABLE_BLAS "Enable BLAS" OFF)
 
