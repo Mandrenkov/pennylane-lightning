@@ -346,7 +346,7 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
                               const std::vector<size_t> &wires,
                               [[maybe_unused]] bool inverse) {
         assert(wires.size() == 1);
-        constexpr auto isqrt2 = Util::INVSQRT2<PrecisionT>();
+        constexpr static auto isqrt2 = Util::INVSQRT2<PrecisionT>();
         const size_t rev_wire = num_qubits - wires[0] - 1;
         const size_t rev_wire_shift = (static_cast<size_t>(1U) << rev_wire);
         const size_t wire_parity = fillTrailingOnes(rev_wire);
@@ -392,11 +392,10 @@ class GateImplementationsLM : public PauliGenerator<GateImplementationsLM> {
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        const std::complex<PrecisionT> shift =
-            (inverse) ? std::conj(std::exp(std::complex<PrecisionT>(
-                            0, static_cast<PrecisionT>(M_PI / 4))))
-                      : std::exp(std::complex<PrecisionT>(
-                            0, static_cast<PrecisionT>(M_PI / 4)));
+        constexpr static auto isqrt2 = Util::INVSQRT2<PrecisionT>();
+
+        const std::complex<PrecisionT> shift = {isqrt2,
+                                                inverse ? -isqrt2 : isqrt2};
 
         for (size_t k = 0; k < Util::exp2(num_qubits - 1); k++) {
             const size_t i0 = ((k << 1U) & wire_parity_inv) | (wire_parity & k);

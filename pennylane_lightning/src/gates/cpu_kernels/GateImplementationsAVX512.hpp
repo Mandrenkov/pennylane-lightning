@@ -26,12 +26,14 @@
 #include "avx_common/ApplyPauliX.hpp"
 #include "avx_common/ApplyPauliY.hpp"
 #include "avx_common/ApplyPauliZ.hpp"
+#include "avx_common/ApplyPhaseShift.hpp"
 #include "avx_common/ApplyRX.hpp"
 #include "avx_common/ApplyRY.hpp"
 #include "avx_common/ApplyRZ.hpp"
 #include "avx_common/ApplyS.hpp"
 #include "avx_common/ApplySWAP.hpp"
 #include "avx_common/ApplySingleQubitOp.hpp"
+#include "avx_common/ApplyT.hpp"
 
 #include "BitUtil.hpp"
 #include "Error.hpp"
@@ -56,13 +58,14 @@ class GateImplementationsAVX512 {
     constexpr static uint32_t packed_bytes = 64;
 
     constexpr static std::array implemented_gates = {
-        GateOperation::PauliX, GateOperation::PauliY,
-
-        GateOperation::Hadamard, GateOperation::S, GateOperation::SWAP,
-        /* T, PhaseShift */
-        GateOperation::RX, GateOperation::RY, GateOperation::RZ,
-        GateOperation::Rot, GateOperation::CZ, GateOperation::IsingXX,
-        GateOperation::IsingYY, GateOperation::IsingZZ,
+        GateOperation::PauliX,     GateOperation::PauliY,
+        GateOperation::Hadamard,   GateOperation::S,
+        GateOperation::SWAP,       GateOperation::T,
+        GateOperation::PhaseShift, GateOperation::RX,
+        GateOperation::RY,         GateOperation::RZ,
+        GateOperation::Rot,        GateOperation::CZ,
+        GateOperation::IsingXX,    GateOperation::IsingYY,
+        GateOperation::IsingZZ,
         /* CRX, CRY, CRZ, CRot */
     };
 
@@ -122,6 +125,7 @@ class GateImplementationsAVX512 {
             }
         }
     }
+
     template <class PrecisionT>
     static void applyPauliX(std::complex<PrecisionT> *arr,
                             const size_t num_qubits,
@@ -313,11 +317,8 @@ class GateImplementationsAVX512 {
                 return;
             }
         } else if (std::is_same_v<PrecisionT, double>) {
-            if (num_qubits < 2) {
-                GateImplementationsLM::applyS(arr, num_qubits, wires, inverse);
-                return;
-            }
             const size_t rev_wire = num_qubits - wires[0] - 1;
+
             switch (rev_wire) {
             case 0:
                 ApplySAVX512::template applyInternal<0>(arr, num_qubits,
@@ -329,6 +330,120 @@ class GateImplementationsAVX512 {
                 return;
             default:
                 ApplySAVX512::applyExternal(arr, num_qubits, rev_wire, inverse);
+                return;
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    template <class PrecisionT>
+    static void applyT(std::complex<PrecisionT> *arr, const size_t num_qubits,
+                       const std::vector<size_t> &wires,
+                       [[maybe_unused]] bool inverse) {
+        using ApplyTAVX512 =
+            AVX::ApplyT<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
+        assert(wires.size() == 1);
+
+        if (num_qubits <
+            AVX::internal_wires_v<packed_bytes / sizeof(PrecisionT)>) {
+            GateImplementationsLM::applyT(arr, num_qubits, wires, inverse);
+            return;
+        }
+
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                ApplyTAVX512::template applyInternal<0>(arr, num_qubits,
+                                                        inverse);
+                return;
+            case 1:
+                ApplyTAVX512::template applyInternal<1>(arr, num_qubits,
+                                                        inverse);
+                return;
+            case 2:
+                ApplyTAVX512::template applyInternal<2>(arr, num_qubits,
+                                                        inverse);
+                return;
+            default:
+                ApplyTAVX512::applyExternal(arr, num_qubits, rev_wire, inverse);
+                return;
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+            switch (rev_wire) {
+            case 0:
+                ApplyTAVX512::template applyInternal<0>(arr, num_qubits,
+                                                        inverse);
+                return;
+            case 1:
+                ApplyTAVX512::template applyInternal<1>(arr, num_qubits,
+                                                        inverse);
+                return;
+            default:
+                ApplyTAVX512::applyExternal(arr, num_qubits, rev_wire, inverse);
+                return;
+            }
+        } else {
+            static_assert(std::is_same_v<PrecisionT, float> ||
+                          std::is_same_v<PrecisionT, double>);
+        }
+    }
+
+    template <class PrecisionT, class ParamT = PrecisionT>
+    static void applyPhaseShift(std::complex<PrecisionT> *arr,
+                                const size_t num_qubits,
+                                const std::vector<size_t> &wires, bool inverse,
+                                ParamT angle) {
+        using ApplyPhaseShiftAVX512 =
+            AVX::ApplyPhaseShift<PrecisionT, packed_bytes / sizeof(PrecisionT)>;
+        assert(wires.size() == 1);
+
+        if (num_qubits <
+            AVX::internal_wires_v<packed_bytes / sizeof(PrecisionT)>) {
+            GateImplementationsLM::applyPhaseShift(arr, num_qubits, wires,
+                                                   inverse, angle);
+            return;
+        }
+
+        if constexpr (std::is_same_v<PrecisionT, float>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+
+            switch (rev_wire) {
+            case 0:
+                ApplyPhaseShiftAVX512::template applyInternal<0>(
+                    arr, num_qubits, inverse, angle);
+                return;
+            case 1:
+                ApplyPhaseShiftAVX512::template applyInternal<1>(
+                    arr, num_qubits, inverse, angle);
+                return;
+            case 2:
+                ApplyPhaseShiftAVX512::template applyInternal<2>(
+                    arr, num_qubits, inverse, angle);
+                return;
+            default:
+                ApplyPhaseShiftAVX512::applyExternal(arr, num_qubits, rev_wire,
+                                                     inverse, angle);
+                return;
+            }
+        } else if (std::is_same_v<PrecisionT, double>) {
+            const size_t rev_wire = num_qubits - wires[0] - 1;
+            switch (rev_wire) {
+            case 0:
+                ApplyPhaseShiftAVX512::template applyInternal<0>(
+                    arr, num_qubits, inverse, angle);
+                return;
+            case 1:
+                ApplyPhaseShiftAVX512::template applyInternal<1>(
+                    arr, num_qubits, inverse, angle);
+                return;
+            default:
+                ApplyPhaseShiftAVX512::applyExternal(arr, num_qubits, rev_wire,
+                                                     inverse, angle);
                 return;
             }
         } else {
@@ -445,6 +560,7 @@ class GateImplementationsAVX512 {
                           std::is_same_v<PrecisionT, double>);
         }
     }
+
     template <class PrecisionT, class ParamT = PrecisionT>
     static void applyRY(std::complex<PrecisionT> *arr, const size_t num_qubits,
                         const std::vector<size_t> &wires, bool inverse,
@@ -620,6 +736,7 @@ class GateImplementationsAVX512 {
                           "Only float and double are supported.");
         }
     }
+
     template <class PrecisionT>
     static void
     applySWAP(std::complex<PrecisionT> *arr, const size_t num_qubits,

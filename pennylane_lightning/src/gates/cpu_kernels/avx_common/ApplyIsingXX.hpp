@@ -13,7 +13,7 @@
 // limitations under the License.
 /**
  * @file
- * Defines [] gate
+ * Defines IsingXX gate
  */
 #pragma once
 #include "AVXUtil.hpp"
