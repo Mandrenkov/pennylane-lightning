@@ -66,7 +66,7 @@ class GateImplementationsAVX2 {
         /* Two-qubit gates */
         GateOperation::CZ, GateOperation::CNOT, GateOperation::SWAP,
         GateOperation::IsingXX, GateOperation::IsingYY, GateOperation::IsingZZ,
-        /* CRX, CRY, CRZ, CRot */
+        /* ControlledPhaseShift, CRX, CRY, CRZ, CRot */
     };
 
     constexpr static std::array<GeneratorOperation, 0> implemented_generators =

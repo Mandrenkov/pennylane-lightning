@@ -65,7 +65,7 @@ class PermutationGenerator : public WiresGenerator {
         }
     }
 
-    PermutationGenerator(size_t n, size_t r) : available_elts_{} {
+    PermutationGenerator(size_t n, size_t r) {
         v.resize(r);
 
         available_elts_.resize(n);

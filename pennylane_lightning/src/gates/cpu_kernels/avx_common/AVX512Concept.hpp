@@ -151,8 +151,7 @@ constexpr auto internalParity<float, 16>(size_t rev_wire) -> __m512 {
 template <>
 constexpr auto internalParity<double, 8>(size_t rev_wire) -> __m512d {
     // AVX2 with float
-    // clang-format off
-    switch(rev_wire) {
+    switch (rev_wire) {
     case 0:
         return __m512d{1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0};
     case 1:
@@ -160,12 +159,10 @@ constexpr auto internalParity<double, 8>(size_t rev_wire) -> __m512d {
     default:
         PL_UNREACHABLE;
     }
-    // clang-format on
     return __m512d{
         0,
     };
 }
-
 
 template <> struct ImagFactor<float, 16> {
     constexpr static auto create(float val) -> AVXIntrinsicType<float, 16> {

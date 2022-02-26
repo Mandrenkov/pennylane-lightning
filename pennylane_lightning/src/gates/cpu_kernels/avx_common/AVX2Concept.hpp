@@ -119,10 +119,8 @@ template <typename T> struct AVX2Concept {
 template <> struct AVXConcept<float, 8> { using Type = AVX2Concept<float>; };
 template <> struct AVXConcept<double, 4> { using Type = AVX2Concept<double>; };
 
-template<>
-constexpr auto internalParity<float, 8>(size_t rev_wire) -> __m256 {
-    // clang-format off
-    switch(rev_wire) {
+template <> constexpr auto internalParity<float, 8>(size_t rev_wire) -> __m256 {
+    switch (rev_wire) {
     case 0:
         return __m256{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
     case 1:
@@ -130,13 +128,11 @@ constexpr auto internalParity<float, 8>(size_t rev_wire) -> __m256 {
     default:
         PL_UNREACHABLE;
     }
-    // clang-format on
     return _mm256_setzero_ps();
 }
 template <>
 constexpr auto internalParity<double, 4>(size_t rev_wire) -> __m256d {
-    // clang-format off
-    switch(rev_wire) {
+    switch (rev_wire) {
     case 0:
         return __m256d{1.0, 1.0, -1.0, -1.0};
     case 1:
@@ -144,7 +140,6 @@ constexpr auto internalParity<double, 4>(size_t rev_wire) -> __m256d {
     default:
         PL_UNREACHABLE;
     }
-    // clang-format on
     return _mm256_setzero_pd();
 }
 
