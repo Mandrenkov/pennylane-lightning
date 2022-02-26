@@ -27,7 +27,7 @@
 #include "cpu_kernels/GateImplementationsParallelLM.hpp"
 #endif
 
-#if PL_USE_AVX512F && PL_USE_AVX512DQ
+#if PL_USE_AVX512F 
 #include "cpu_kernels/GateImplementationsAVX512.hpp"
 #endif
 
@@ -51,11 +51,11 @@ using AvailableKernels =
 #if PL_USE_OMP
                    Gates::GateImplementationsParallelLM,
 #endif
-#if PL_USE_AVX512F && PL_USE_AVX512DQ
-                   Gates::GateImplementationsAVX512,
-#endif
 #if PL_USE_AVX2
                    Gates::GateImplementationsAVX2,
+#endif
+#if PL_USE_AVX512F
+                   Gates::GateImplementationsAVX512,
 #endif
                    void>;
 } // namespace Pennylane

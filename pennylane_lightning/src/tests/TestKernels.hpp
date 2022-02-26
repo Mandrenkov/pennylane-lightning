@@ -12,7 +12,7 @@
 #if PL_USE_OMP
 #include "cpu_kernels/GateImplementationsParallelLM.hpp"
 #endif
-#if PL_USE_AVX512F && PL_USE_AVX512DQ
+#if PL_USE_AVX512F
 #include "cpu_kernels/GateImplementationsAVX512.hpp"
 #endif
 #if PL_USE_AVX2
@@ -25,7 +25,7 @@ using TestKernels =
 #if PL_USE_OMP
                               Pennylane::Gates::GateImplementationsParallelLM,
 #endif
-#if PL_USE_AVX512F && PL_USE_AVX512DQ
+#if PL_USE_AVX512F
                               Pennylane::Gates::GateImplementationsAVX512,
 #endif
 #if PL_USE_AVX2
