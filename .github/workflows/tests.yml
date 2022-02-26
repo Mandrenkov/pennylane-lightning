@@ -11,7 +11,7 @@ env:
 
 jobs:
   cpptests:
-    name: C++ tests
+    name: C++ tests without OpenMP
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -54,7 +54,7 @@ jobs:
           files: Build/tests/results/report.xml
 
   cpptests-omp:
-    name: C++ tests
+    name: C++ tests with OpenMP
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
