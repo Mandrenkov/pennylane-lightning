@@ -68,8 +68,8 @@ if(ENABLE_AVX2)
 endif()
 
 if(ENABLE_AVX512)
-    message(STATUS "ENABLE_AVX512 is ON. Use AVX512F and AVX512DQ.")
-    target_compile_options(lightning_compile_options INTERFACE -mavx512f -mavx512dq)
+    message(STATUS "ENABLE_AVX512 is ON. Use AVX512F.")
+    target_compile_options(lightning_compile_options INTERFACE -mavx512f)
 endif()
 
 
