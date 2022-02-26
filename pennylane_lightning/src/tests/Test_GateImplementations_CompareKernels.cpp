@@ -104,8 +104,10 @@ void testApplyGate(RandomEngine &re, size_t num_qubits) {
         for (const auto &wires : all_wires) {
             const auto params = createParams<ParamT>(gate_op);
             const auto gate_name = lookup(Constant::gate_names, gate_op);
-            DYNAMIC_SECTION("Test gate " << gate_name << 
-                            " with inverse = false") { // Test with inverse = false
+            DYNAMIC_SECTION(
+                "Test gate "
+                << gate_name
+                << " with inverse = false") { // Test with inverse = false
                 const auto results = Util::tuple_to_array(
                     applyGateForImplemetingKernels<gate_op, PrecisionT, ParamT,
                                                    Kernels>(
@@ -113,12 +115,15 @@ void testApplyGate(RandomEngine &re, size_t num_qubits) {
                         std::make_index_sequence<length<Kernels>()>()));
 
                 for (size_t i = 0; i < results.size() - 1; i++) {
-                    REQUIRE(results[i] == PLApprox(results[i + 1]).margin(1e-7));
+                    REQUIRE(results[i] ==
+                            PLApprox(results[i + 1]).margin(1e-7));
                 }
             }
 
-            DYNAMIC_SECTION("Test gate " << gate_name << 
-                            " with inverse = true") { // Test with inverse = true
+            DYNAMIC_SECTION(
+                "Test gate "
+                << gate_name
+                << " with inverse = true") { // Test with inverse = true
                 const auto results = Util::tuple_to_array(
                     applyGateForImplemetingKernels<gate_op, PrecisionT, ParamT,
                                                    Kernels>(
@@ -126,7 +131,8 @@ void testApplyGate(RandomEngine &re, size_t num_qubits) {
                         std::make_index_sequence<length<Kernels>()>()));
 
                 for (size_t i = 0; i < results.size() - 1; i++) {
-                    REQUIRE(results[i] == PLApprox(results[i + 1]).margin(1e-7));
+                    REQUIRE(results[i] ==
+                            PLApprox(results[i + 1]).margin(1e-7));
                 }
             }
         }

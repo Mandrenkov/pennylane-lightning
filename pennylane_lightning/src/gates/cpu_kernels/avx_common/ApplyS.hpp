@@ -92,8 +92,9 @@ template <typename PrecisionT, size_t packed_size> struct ApplyS {
         const size_t wire_parity = fillTrailingOnes(rev_wire);
         const size_t wire_parity_inv = fillLeadingOnes(rev_wire + 1);
 
-        const auto factor = set1<PrecisionT, packed_size>(inverse ? -1.0 : 1.0)
-                            * imagFactor<PrecisionT, packed_size>();
+        const auto factor =
+            set1<PrecisionT, packed_size>(inverse ? -1.0 : 1.0) *
+            imagFactor<PrecisionT, packed_size>();
         constexpr static auto perm = compilePermutation<PrecisionT>(
             swapRealImag(identity<packed_size>()));
 

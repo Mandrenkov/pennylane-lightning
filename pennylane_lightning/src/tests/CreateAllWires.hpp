@@ -11,7 +11,8 @@ namespace Pennylane {
 
 class WiresGenerator {
   public:
-    [[nodiscard]] virtual auto all_perms() const -> const std::vector<std::vector<size_t>>& = 0;
+    [[nodiscard]] virtual auto all_perms() const
+        -> const std::vector<std::vector<size_t>> & = 0;
 };
 class CombinationGenerator : public WiresGenerator {
   private:
@@ -39,8 +40,7 @@ class CombinationGenerator : public WiresGenerator {
         comb(n, r);
     }
 
-    [[nodiscard]]
-    auto all_perms() const
+    [[nodiscard]] auto all_perms() const
         -> const std::vector<std::vector<size_t>> & override {
         return all_perms_;
     }
@@ -55,18 +55,17 @@ class PermutationGenerator : public WiresGenerator {
     void perm(size_t n, size_t r) {
         if (r == 0) {
             all_perms_.push_back(v);
-            return ;
+            return;
         }
-        for(size_t i = 0; i < n; i++) {
-            v[r-1] = available_elts_[i];
-            std::swap(available_elts_[n-1], available_elts_[i]);
-            perm(n-1, r-1);
-            std::swap(available_elts_[n-1], available_elts_[i]);
+        for (size_t i = 0; i < n; i++) {
+            v[r - 1] = available_elts_[i];
+            std::swap(available_elts_[n - 1], available_elts_[i]);
+            perm(n - 1, r - 1);
+            std::swap(available_elts_[n - 1], available_elts_[i]);
         }
     }
 
-    PermutationGenerator(size_t n, size_t r) 
-        : available_elts_{} {
+    PermutationGenerator(size_t n, size_t r) : available_elts_{} {
         v.resize(r);
 
         available_elts_.resize(n);
@@ -74,8 +73,7 @@ class PermutationGenerator : public WiresGenerator {
         perm(n, r);
     }
 
-    [[nodiscard]]
-    auto all_perms() const
+    [[nodiscard]] auto all_perms() const
         -> const std::vector<std::vector<size_t>> & override {
         return all_perms_;
     }

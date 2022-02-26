@@ -27,7 +27,7 @@
 
 namespace Pennylane::Gates::AVX {
 
-template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
+template <typename PrecisionT, size_t packed_size> struct ApplyIsingYY {
     using PrecisionAVXConcept =
         typename AVXConcept<PrecisionT, packed_size>::Type;
 
@@ -56,7 +56,15 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
 
         const auto real_cos =
             set1<PrecisionT, packed_size>(std::cos(angle / 2));
-        const auto imag_sin = imagFactor<PrecisionT, packed_size>(isin);
+        const auto imag_sin =
+            imagFactor<PrecisionT, packed_size>(isin) *
+            toParity<PrecisionT, packed_size>([](size_t n) {
+                size_t b = ((n >> rev_wire0) ^ (n >> rev_wire1)) & 1U;
+                if (b == 0) {
+                    return 1;
+                }
+                return 0;
+            });
 
         constexpr static auto perm =
             permutationInternalInternal<rev_wire0, rev_wire1>();
@@ -85,7 +93,12 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
             inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
         const auto cos_factor =
             set1<PrecisionT, packed_size>(std::cos(angle / 2));
-        const auto isin_factor = imagFactor<PrecisionT, packed_size>(isin);
+        const auto isin_factor0 =
+            imagFactor<PrecisionT, packed_size>(isin) *
+            internalParity<PrecisionT, packed_size>(min_rev_wire);
+        const auto isin_factor1 =
+            imagFactor<PrecisionT, packed_size>(-isin) *
+            internalParity<PrecisionT, packed_size>(min_rev_wire);
 
         constexpr static auto perm = compilePermutation<PrecisionT>(
             swapRealImag(flip(identity<packed_size>(), min_rev_wire)));
@@ -99,10 +112,12 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
             const auto v1 = PrecisionAVXConcept::load(arr + i1);
 
             const auto prod_cos0 = cos_factor * v0;
-            const auto prod_sin0 = isin_factor * Permutation::permute<perm>(v1);
+            const auto prod_sin0 =
+                isin_factor1 * Permutation::permute<perm>(v1);
 
             const auto prod_cos1 = cos_factor * v1;
-            const auto prod_sin1 = isin_factor * Permutation::permute<perm>(v0);
+            const auto prod_sin1 =
+                isin_factor0 * Permutation::permute<perm>(v0);
 
             PrecisionAVXConcept::store(arr + i0, prod_cos0 + prod_sin0);
             PrecisionAVXConcept::store(arr + i1, prod_cos1 + prod_sin1);
@@ -132,7 +147,8 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
 
         const auto cos_factor =
             set1<PrecisionT, packed_size>(std::cos(angle / 2));
-        const auto isin_factor = imagFactor<PrecisionT, packed_size>(isin);
+        const auto p_isin_factor = imagFactor<PrecisionT, packed_size>(isin);
+        const auto m_isin_factor = imagFactor<PrecisionT, packed_size>(-isin);
 
         constexpr static auto perm = compilePermutation<PrecisionT>(
             swapRealImag(identity<packed_size>()));
@@ -150,16 +166,16 @@ template <typename PrecisionT, size_t packed_size> struct ApplyIsingXX {
             const auto v11 = PrecisionAVXConcept::load(arr + i11); // 11
 
             const auto prod_cos00 = cos_factor * v00;
-            const auto prod_isin00 = isin_factor * permute<perm>(v11);
+            const auto prod_isin00 = m_isin_factor * permute<perm>(v11);
 
             const auto prod_cos01 = cos_factor * v01;
-            const auto prod_isin01 = isin_factor * permute<perm>(v10);
+            const auto prod_isin01 = p_isin_factor * permute<perm>(v10);
 
             const auto prod_cos10 = cos_factor * v10;
-            const auto prod_isin10 = isin_factor * permute<perm>(v01);
+            const auto prod_isin10 = p_isin_factor * permute<perm>(v01);
 
             const auto prod_cos11 = cos_factor * v11;
-            const auto prod_isin11 = isin_factor * permute<perm>(v00);
+            const auto prod_isin11 = m_isin_factor * permute<perm>(v00);
 
             PrecisionAVXConcept::store(arr + i00, prod_cos00 + prod_isin00);
             PrecisionAVXConcept::store(arr + i01, prod_cos01 + prod_isin01);

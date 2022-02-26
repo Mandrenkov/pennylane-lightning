@@ -34,8 +34,7 @@ template <typename PrecisionT, size_t packed_size> struct ApplyRX {
     template <size_t rev_wire, class ParamT>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
-                              [[maybe_unused]] bool inverse,
-                              ParamT angle) {
+                              [[maybe_unused]] bool inverse, ParamT angle) {
         using namespace Permutation;
         const PrecisionT isin =
             inverse ? std::sin(angle / 2) : -std::sin(angle / 2);

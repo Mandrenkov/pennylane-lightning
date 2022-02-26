@@ -34,16 +34,19 @@ template <typename PrecisionT, size_t packed_size> struct ApplyRY {
     template <size_t rev_wire, class ParamT>
     static void applyInternal(std::complex<PrecisionT> *arr,
                               const size_t num_qubits,
-                              [[maybe_unused]] bool inverse,
-                              ParamT angle) {
+                              [[maybe_unused]] bool inverse, ParamT angle) {
         using namespace Permutation;
         const PrecisionT isin =
             inverse ? std::sin(angle / 2) : -std::sin(angle / 2);
 
-        const auto diag_real = set1<PrecisionT, packed_size>(std::cos(angle / 2));
-        const auto offdiag_real = internalParity<PrecisionT, packed_size>(rev_wire) * set1<PrecisionT, packed_size>(isin);
+        const auto diag_real =
+            set1<PrecisionT, packed_size>(std::cos(angle / 2));
+        const auto offdiag_real =
+            internalParity<PrecisionT, packed_size>(rev_wire) *
+            set1<PrecisionT, packed_size>(isin);
 
-        constexpr static auto perm = compilePermutation<PrecisionT>(flip(identity<packed_size>(), rev_wire));
+        constexpr static auto perm = compilePermutation<PrecisionT>(
+            flip(identity<packed_size>(), rev_wire));
 
         for (size_t n = 0; n < (1U << num_qubits); n += packed_size / 2) {
             const auto v = PrecisionAVXConcept::load(arr + n);

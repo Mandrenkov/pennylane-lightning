@@ -217,7 +217,7 @@ constexpr auto set1(PrecisionT val) {
 }
 
 template <size_t packed_size> struct InternalWires {
-    constexpr static auto value = Util::constLog2PerfectPower(packed_size);
+    constexpr static auto value = Util::constLog2PerfectPower(packed_size / 2);
 };
 template <size_t packed_size>
 constexpr auto internal_wires_v = InternalWires<packed_size>::value;

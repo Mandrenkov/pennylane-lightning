@@ -207,16 +207,40 @@ PENNYLANE_RUN_TEST(T);
 
 template <typename PrecisionT, class GateImplementation> void testApplyCNOT() {
     const size_t num_qubits = 3;
-    auto st = createProductState<PrecisionT>("+00");
 
-    // Test using |+00> state to generate 3-qubit GHZ state
-
-    for (size_t index = 1; index < num_qubits; index++) {
-        GateImplementation::applyCNOT(st.data(), num_qubits, {index - 1, index},
-                                      false);
+    SECTION("CNOT0,1 |000> = |000>") {
+        const auto ini_st = createProductState<PrecisionT>("000");
+        auto st = ini_st;
+        GateImplementation::applyCNOT(st.data(), num_qubits, {0, 1}, false);
+        CHECK(st == ini_st);
     }
-    CHECK(st.front() == Util::INVSQRT2<PrecisionT>());
-    CHECK(st.back() == Util::INVSQRT2<PrecisionT>());
+
+    SECTION("CNOT0,1 |100> = |110>") {
+        const auto ini_st = createProductState<PrecisionT>("100");
+        auto st = ini_st;
+        GateImplementation::applyCNOT(st.data(), num_qubits, {0, 1}, false);
+        CHECK(st ==
+              PLApprox(createProductState<PrecisionT>("110")).margin(1e-7));
+    }
+    SECTION("CNOT1,2 |110> = |111>") {
+        const auto ini_st = createProductState<PrecisionT>("110");
+        auto st = ini_st;
+        GateImplementation::applyCNOT(st.data(), num_qubits, {1, 2}, false);
+        CHECK(st ==
+              PLApprox(createProductState<PrecisionT>("111")).margin(1e-7));
+    }
+
+    SECTION("Generate GHZ state") {
+        auto st = createProductState<PrecisionT>("+00");
+
+        // Test using |+00> state to generate 3-qubit GHZ state
+        for (size_t index = 1; index < num_qubits; index++) {
+            GateImplementation::applyCNOT(st.data(), num_qubits,
+                                          {index - 1, index}, false);
+        }
+        CHECK(st.front() == Util::INVSQRT2<PrecisionT>());
+        CHECK(st.back() == Util::INVSQRT2<PrecisionT>());
+    }
 }
 PENNYLANE_RUN_TEST(CNOT);
 
