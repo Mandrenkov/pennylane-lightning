@@ -123,6 +123,50 @@ template <> struct AVXConcept<double, 8> {
     using Type = AVX512Concept<double>;
 };
 
+template <>
+constexpr auto internalParity<float, 16>(size_t rev_wire) -> __m512 {
+    // AVX2 with float
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m512{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F,
+                      1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
+    case 1:
+        return __m512{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F,
+                      1.0F, 1.0F, 1.0F, 1.0F, -1.0F,- 1.0F, -1.0F, -1.0F};
+    case 2:
+        return __m512{ 1.0F,  1.0F,  1.0F,  1.0F,
+                       1.0F,  1.0F,  1.0F,  1.0F,
+                      -1.0F, -1.0F, -1.0F, -1.0F,
+                      -1.0F,- 1.0F, -1.0F, -1.0F};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return __m512{
+        0,
+    };
+};
+
+template <>
+constexpr auto internalParity<double, 8>(size_t rev_wire) -> __m512d {
+    // AVX2 with float
+    // clang-format off
+    switch(rev_wire) {
+    case 0:
+        return __m512d{1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0};
+    case 1:
+        return __m512d{1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0};
+    default:
+        PL_UNREACHABLE;
+    }
+    // clang-format on
+    return __m512d{
+        0,
+    };
+}
+
+
 template <> struct ImagFactor<float, 16> {
     constexpr static auto create(float val) -> AVXIntrinsicType<float, 16> {
         return __m512{-val, val, -val, val, -val, val, -val, val,

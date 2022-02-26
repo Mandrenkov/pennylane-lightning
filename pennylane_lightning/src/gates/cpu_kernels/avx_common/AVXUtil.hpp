@@ -120,81 +120,11 @@ auto setValueOneTwo(Func&& func)
 
 /**
  * @brief one or minus one parity for reverse wire in packed data.
+ *
+ * All specializations are defined in AVX2Concept.hpp and AVX512Concept.hpp files.
  */
 template <typename PrecisionT, size_t packed_size>
 constexpr auto internalParity(size_t rev_wire) -> AVXIntrinsicType<PrecisionT, packed_size>;
-
-template<>
-constexpr auto internalParity<float, 8>(size_t rev_wire) -> __m256 {
-    // clang-format off
-    switch(rev_wire) {
-    case 0:
-        return __m256{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
-    case 1:
-        return __m256{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F};
-    default:
-        PL_UNREACHABLE;
-    }
-    // clang-format on
-    return _mm256_setzero_ps();
-}
-template <>
-constexpr auto internalParity<double, 4>(size_t rev_wire) -> __m256d {
-    // clang-format off
-    switch(rev_wire) {
-    case 0:
-        return __m256d{1.0, 1.0, -1.0, -1.0};
-    case 1:
-        return __m256d{1.0, 1.0, 1.0, 1.0};
-    default:
-        PL_UNREACHABLE;
-    }
-    // clang-format on
-    return _mm256_setzero_pd();
-}
-
-template <>
-constexpr auto internalParity<float, 16>(size_t rev_wire) -> __m512 {
-    // AVX2 with float
-    // clang-format off
-    switch(rev_wire) {
-    case 0:
-        return __m512{1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F,
-                      1.0F, 1.0F, -1.0F, -1.0F, 1.0F, 1.0F, -1.0F, -1.0F};
-    case 1:
-        return __m512{1.0F, 1.0F, 1.0F, 1.0F, -1.0F, -1.0F, -1.0F, -1.0F,
-                      1.0F, 1.0F, 1.0F, 1.0F, -1.0F,- 1.0F, -1.0F, -1.0F};
-    case 2:
-        return __m512{ 1.0F,  1.0F,  1.0F,  1.0F,
-                       1.0F,  1.0F,  1.0F,  1.0F,
-                      -1.0F, -1.0F, -1.0F, -1.0F,
-                      -1.0F,- 1.0F, -1.0F, -1.0F};
-    default:
-        PL_UNREACHABLE;
-    }
-    // clang-format on
-    return __m512{
-        0,
-    };
-};
-
-template <>
-constexpr auto internalParity<double, 8>(size_t rev_wire) -> __m512d {
-    // AVX2 with float
-    // clang-format off
-    switch(rev_wire) {
-    case 0:
-        return __m512d{1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0};
-    case 1:
-        return __m512d{1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0};
-    default:
-        PL_UNREACHABLE;
-    }
-    // clang-format on
-    return __m512d{
-        0,
-    };
-}
 
 /**
  * @brief Factor that is applied to the intrinsic type for product of
